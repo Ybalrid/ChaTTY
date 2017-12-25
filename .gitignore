@@ -3,7 +3,7 @@ build/CMakeCache.txt
 build/CMakeCache
 build/cmake_install.cmake
 build/ChaTTY
-
+build/CMakeFiles
 # Prerequisites
 *.d
 
