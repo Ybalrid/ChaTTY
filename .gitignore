@@ -4,6 +4,8 @@ build/CMakeCache
 build/cmake_install.cmake
 build/ChaTTY
 build/CMakeFiles
+build/ChaTTYd
+
 # Prerequisites
 *.d
 

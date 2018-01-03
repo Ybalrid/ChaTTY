@@ -14,6 +14,14 @@ cmake ..
 make
 ```
 
-This will produce an executable called `ChaTTY`.
+This will produce an executable called `ChaTTY` that serves as a client, and another called ChaTTYd, that serve as a server.
+
+## Server configuration
+
+ChaTTYd take as first argument the port it will listen to incomming TCP connections
+
+## Client configuration
+
+ChaTTY take as first argument the hostname/ip address of the server it will attempt to connect to.
 
 
