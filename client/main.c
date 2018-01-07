@@ -1,4 +1,5 @@
 #include "ChaTTY_packets.h"
+#include "ChaTTY_common.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -17,14 +18,16 @@ void sanityCheck()
 
 int main(int argc, char* argv[])
 {
-    if(argc < 2)
+    if(argc < 3)
     {
         puts("Please specify server address as first argument");
+        puts("Please specify server port as second argument");
         return EXIT_FAILURE;
     }
 
     const char* hostname = argv[1];
-    printf("Will connect to %s\n", hostname);
+    const unsigned long port = getPortFromStr(argv[2]);
+    printf("Will connect to %s:%u\n", hostname, port);
 
     return EXIT_SUCCESS;
 }
