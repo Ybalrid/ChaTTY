@@ -17,6 +17,14 @@ void sanityCheck()
 
 int main(int argc, char* argv[])
 {
-    sanityCheck();
+    if(argc < 2)
+    {
+        puts("Please specify server address as first argument");
+        return EXIT_FAILURE;
+    }
+
+    const char* hostname = argv[1];
+    printf("Will connect to %s\n", hostname);
+
     return EXIT_SUCCESS;
 }
