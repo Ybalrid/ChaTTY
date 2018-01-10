@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define BUF_SIZE 500
+
 static unsigned long getPortFromStr(const char* str)
 {
     return strtoul(str, NULL, 10);

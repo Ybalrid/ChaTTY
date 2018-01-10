@@ -1,7 +1,7 @@
-#include "ChaTTY_packets.h"
-#include "ChaTTY_common.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "ChaTTY_packets.h"
+#include "ChaTTY_common.h"
 
 void sanityCheck()
 {
@@ -18,6 +18,7 @@ void sanityCheck()
 
 int main(int argc, char* argv[])
 {
+  my_client(argc, argv);
     if(argc < 3)
     {
         puts("Please specify server address as first argument");
