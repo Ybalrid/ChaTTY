@@ -23,5 +23,6 @@ ChaTTYd take as first argument the port it will listen to incomming TCP connecti
 ## Client configuration
 
 ChaTTY take as first argument the hostname/ip address of the server it will attempt to connect to.
+The second argument is the port to use.
 
 
