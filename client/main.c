@@ -23,6 +23,7 @@ void sanityCheck()
 
 int main(int argc, char* argv[])
 {
+    my_client(argc, argv);
     if(argc < 3)
     {
         puts("Please specify server address as first argument");
