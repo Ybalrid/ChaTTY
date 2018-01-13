@@ -1,12 +1,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <unistd.h>
-#include <string.h>
+#include <cstring>
 #include "ChaTTY_common.h"
-#include "client.h"
+#include "client.hpp"
 
 
 int my_client(int argc, char *argv[])

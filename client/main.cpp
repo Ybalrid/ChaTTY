@@ -1,11 +1,12 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
 
 #include "ChaTTY_packets.h"
 #include "ChaTTY_common.h"
 
-#include "ui.h"
+#include "client.hpp"
+#include "ui.hpp"
 
 
 void sanityCheck()
@@ -23,6 +24,9 @@ void sanityCheck()
 
 int main(int argc, char* argv[])
 {
+    std::cout << "I'm in C++ \\o/\n";
+    my_client(argc, argv);
+
     if(argc < 3)
     {
         puts("Please specify server address as first argument");

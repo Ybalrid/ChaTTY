@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ChaTTY_common.h"
-#include "server.h"
+#include "server.hpp"
 
 int main(int argc, char* argv[])
 {

@@ -1,4 +1,4 @@
-#include "ui.h"
+#include "ui.hpp"
 #include <curses.h>
 
 void init_ui()
