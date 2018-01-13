@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <unistd.h>
+#include <fcntl.h>
 #include <cstring>
 
 #include "ChaTTY_common.h"
@@ -20,6 +21,27 @@ in_port_t             get_port(struct sockaddr *sa)
     return ntohs(((struct sockaddr_in6*)sa)->sin6_port);
   }
   return (-1);
+}
+
+int                   my_server_unblock_socket(int fd) {
+  int                 flags, s;
+
+  flags = fcntl(fd, F_GETFL, 0);
+  /* Gets current flags */
+  if (flags == -1) {
+    perror("unblock_socket() -> fcntl(get)");
+    return (-1);
+  }
+
+  flags |= O_NONBLOCK;
+  /* Makes the socket non-blocking */
+
+  s = fcntl(fd, F_SETFL, flags);
+  /* Sets the edited flag to the fd */
+  if (s == -1) {
+    perror("unblock_socket() -> fcntl(set)");
+    return (-1);
+  }
 }
 
 int                   my_server_init(s_my_server *my_srv)
@@ -77,6 +99,12 @@ int                   my_server_init(s_my_server *my_srv)
     /* inet_ntop(AF_INET, rp, addr_str, sizeof(addr_str)),
     get_port(rp->ai_addr)); */
     perror("my_server_init() -> listen()");
+    close(sfd);
+    return -1;
+  }
+
+  if (my_server_unblock_socket(sfd) == -1) {
+    fprintf(stderr, "Could not make the socket in non-blocking mode\n");
     close(sfd);
     return -1;
   }
