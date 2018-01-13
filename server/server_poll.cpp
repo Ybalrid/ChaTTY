@@ -4,42 +4,30 @@
 #include "ChaTTY_packets.h"
 #include "server.hpp"
 
-int                         my_server_poll(s_my_server *my_srv) {
-  /* Reads datagrams and echo them back to sender */
+int     my_server_poll(s_my_server *my_srv) {
+  int   n;
+  int   i;
 
-  int                       s, cfd;
-  struct sockaddr_storage   peer_addr;
-  socklen_t                 peer_addr_len;
-  ssize_t                   nread;
-  char                      buf[BUF_SIZE];
-  struct                    epoll_event ev, *events;
-  char                      host[NI_MAXHOST], service[NI_MAXSERV];
+  while (1) {
+    n = epoll_wait(my_srv->efd, my_srv->events, MAX_EVENTS, -1);
+    i = 0;
 
-  for (;;) {
-    peer_addr_len = sizeof(struct sockaddr_storage);
-    /* Avoid multiple calculation */
-    cfd = accept(my_srv->sfd, (struct sockaddr *) &peer_addr, &peer_addr_len);
-    /* TCP only: waits until a new connection is made */
+    while (i < n) {
+      my_srv->curr_event_i = i; /* Updates struct info */
 
-    nread = recv(cfd, buf, BUF_SIZE, 0 /* | MSG_DONTWAIT*/ );
-    /* TCP form to receive data */
-    /* UDP : nread = recvfrom(cfd, buf, BUF_SIZE, 0, (struct sockaddr *) &peer_addr, &peer_addr_len); */
-
-    if (nread == -1) {
-      continue;               /* Ignore failed request */
-    }
-
-    s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
-    if (s == 0) {
-      printf("Received %ld bytes from %s:%s\n", (long) nread, host, service);
-    }
-    else {
-      fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-    }
-
-    if (send(cfd, buf, nread, 0) != nread) {
-      /* UDP : sendto(cfd, buf, nread, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != nread */
-      fprintf(stderr, "Error sending response\n");
+      if ((my_srv->events[i].events & EPOLLERR) ||
+      (my_srv->events[i].events & EPOLLHUP) ||
+      !(my_srv->events[i].events & EPOLLIN)) {
+        /* Handle any error */
+        my_server_e_error(my_srv);        
+        continue;
+      }
+      else if (my_srv->events[i].data.fd == my_srv->sfd) {
+        /* The server socket have incoming connection(s) */
+        my_server_e_incoming_conn(my_srv);
+      }
+      i++;
     }
   }
+  return (0);
 }

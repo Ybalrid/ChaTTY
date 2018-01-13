@@ -15,8 +15,8 @@ int                 main(int argc, char* argv[]) {
   my_srv.addr_str     = "0.0.0.0";
   my_srv.sfd          = -1;
 
-  my_server_init(&my_srv);
-  if (my_srv.sfd == -1) {
+  if (my_server_init(&my_srv) == -1) {
+    fprintf(stderr, " > in my_server_init()\n");
     return EXIT_FAILURE;
   }
   my_server_poll(&my_srv);
