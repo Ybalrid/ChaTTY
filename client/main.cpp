@@ -25,7 +25,6 @@ void sanityCheck()
 int main(int argc, char* argv[])
 {
     std::cout << "I'm in C++ \\o/\n";
-    my_client(argc, argv);
 
     if(argc < 3)
     {
