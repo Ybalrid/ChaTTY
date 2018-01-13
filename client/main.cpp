@@ -37,12 +37,12 @@ int main(int argc, char* argv[])
     const unsigned long port = getPortFromStr(argv[2]);
     printf("Will connect to %s:%u\n", hostname, port);
 
-    init_ui();
+    UserInterface ui;
     bool run = true;
     while(run)
     {
-        event_loop();
-        if(user_wants_to_quit() || false /*network lost*/)
+        ui.event_loop();
+        if(ui.user_wants_to_quit() || false /*network lost*/)
         {
             run = false;
         }
