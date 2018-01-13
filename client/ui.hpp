@@ -11,7 +11,7 @@ class UserInterface
     WINDOW* terminal;
     WINDOW* buddyList;
     WINDOW* chatLog;
-    WINDOW* InputLine;
+    WINDOW* inputLine;
 
     public:
     ///Initialize ncurses. Create 3 windows where to print text
