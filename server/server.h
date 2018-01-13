@@ -1,1 +1,1 @@
-int my_server(int argc, char **argv);
+int my_server_init(char *service);
