@@ -18,6 +18,7 @@ typedef struct {
 } s_my_client;
 
 int       my_server_init(s_my_server *);
+int       my_server_unblock_socket(int);
 int       my_server_poll(s_my_server *);
 
 #endif
