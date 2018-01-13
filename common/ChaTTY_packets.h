@@ -13,6 +13,7 @@ typedef unsigned char byte_t;
 #define ChaTTY_PACKET_(TYPE) ChaTTY_CAT(ChaTTY_PACKET_PREFIX_TYPE, TYPE)
 #define ChaTTY_PACKET_CAST(TYPE) ((ChaTTY_PACKET_(TYPE) *))
 #define ChaTTY_PACKET_SERIALIZE(PTR) ((byte_t*) (PTR))
+#define ChaTTY_PACKET_SIZE(TYPE) (sizeof(ChaTTY_PACKET_(TYPE)))
 #define ChaTTY_PACKET_HEADER byte_t packetType;
 
 //Configure structure packing : align to the byte
@@ -41,6 +42,8 @@ typedef unsigned char byte_t;
 enum ChaTTY_Packet_def
 {
     EMPTY = 0x00,
+    NAME_TRANSPORT = 0x01,
+    MESSAGE_TRANSPORT = 0x02,
     MAX_COUNT = 0xFF, // No packet identifier should be defined after this value
 };
 
@@ -50,6 +53,20 @@ ChaTTY_PACKET_(EMPTY)
     ChaTTY_PACKET_HEADER
 };
 
+
+ChaTTY_PACKET_(NAME_TRANSPORT)
+{
+    ChaTTY_PACKET_HEADER
+
+    char name[127];
+};
+
+Chatty_PACKET_(MESSAGE_TRANSPORT)
+{
+    ChaTTY_PACKET_HEADER
+
+    char message[1023];
+};
 
 //Restore configuration
 #pragma pack(pop)
