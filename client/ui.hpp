@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <string>
 #include <ncurses.h>
 
@@ -12,6 +13,12 @@ class UserInterface
     WINDOW* buddyList;
     WINDOW* chatLog;
     WINDOW* inputLine;
+
+    int maxx, maxy;
+
+    std::vector<std::string> chatLogBuffer;
+
+    void send_to_server(std::string message);
 
     public:
     ///Initialize ncurses. Create 3 windows where to print text

@@ -13,8 +13,8 @@ UserInterface::UserInterface() :
     noecho();
     keypad(stdscr, TRUE);
     cbreak();
-    const int maxy = getmaxy(terminal);
-    const int maxx = getmaxx(terminal);
+    maxy = getmaxy(terminal);
+    maxx = getmaxx(terminal);
     //Create 3 window
 
     //window 1 shows a list of connected people
@@ -33,11 +33,8 @@ UserInterface::UserInterface() :
     box(inputLine, 0, 0);
     wrefresh(inputLine);
     wmove(inputLine, 1, 1);
-    wprintw(inputLine, "You write here!");
 
     move(maxy-1, 0);
-    printw("Press F12 to close");
-    move(0, 0);
 }
 
 UserInterface::~UserInterface()
@@ -46,8 +43,14 @@ UserInterface::~UserInterface()
 }
 
 
+void UserInterface::send_to_server(std::string message)
+{
+}
+
 void UserInterface::event_loop()
 {
+
+    //TODO handle change of size here
     //Update display
     refresh();
     wrefresh(buddyList);
@@ -57,13 +60,35 @@ void UserInterface::event_loop()
     int input = getch();
     if(input != ERR)
     {
+        //Get the F12 keu
         if(input == KEY_F(12))
         {
             stop = true;
             return;
         }
+
+        //Backspace or delete character
+        if(input == KEY_BACKSPACE
+                || input == 127)
+        {
+            if(!inputBuffer.empty())
+                inputBuffer.pop_back(); //popping from empty string causes segfault
+        }
+        //TODO properly handler characters
+        if(input >= 32 && input <= 126)
+            inputBuffer.push_back(static_cast<char>(input));
+
+        if(input == '\n' || input == '\r')
+        {
+            //send input buffer text to network code
+            send_to_server(inputBuffer);
+            inputBuffer.clear();
+        }
     }
-    //Add typed text to a buffer. If '\r' or '\n' detected, hand that text to the network part of the program
+    werase(inputLine);
+    box(inputLine, 0, 0);
+    wmove(inputLine, 1, 1);
+    wprintw(inputLine, inputBuffer.c_str());
 }
 
 bool UserInterface::user_wants_to_quit()
