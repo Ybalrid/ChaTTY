@@ -1,7 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+
 #include "ChaTTY_packets.h"
 #include "ChaTTY_common.h"
+
+#include "ui.h"
+
 
 void sanityCheck()
 {
@@ -18,7 +23,6 @@ void sanityCheck()
 
 int main(int argc, char* argv[])
 {
-  my_client(argc, argv);
     if(argc < 3)
     {
         puts("Please specify server address as first argument");
@@ -29,6 +33,18 @@ int main(int argc, char* argv[])
     const char* hostname = argv[1];
     const unsigned long port = getPortFromStr(argv[2]);
     printf("Will connect to %s:%u\n", hostname, port);
+
+    init_ui();
+    bool run = true;
+    while(run)
+    {
+        event_loop();
+        if(user_wants_to_quit() || false /*network lost*/)
+        {
+            run = false;
+        }
+    }
+
 
     return EXIT_SUCCESS;
 }
