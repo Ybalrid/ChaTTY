@@ -6,10 +6,12 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <cstring>
+
 #include "ChaTTY_common.h"
+
 #include "server.hpp"
 
-in_port_t get_port(struct sockaddr *sa)
+in_port_t             get_port(struct sockaddr *sa)
 {
   if (sa->sa_family == AF_INET) {
     return ntohs(((struct sockaddr_in*)sa)->sin_port);
@@ -20,24 +22,25 @@ in_port_t get_port(struct sockaddr *sa)
   return (-1);
 }
 
-int my_server_init(char *param_service)
+int                   my_server_init(s_my_server *my_srv)
 {
-  struct addrinfo           hints;
-  struct addrinfo           *result, *rp;
-  char                      addr_str[INET6_ADDRSTRLEN];
-  int                       sfd, s;
+  struct addrinfo     hints;
+  struct addrinfo     *result, *rp;
+  char                addr_str[INET6_ADDRSTRLEN];
+  int                 sfd, s;
 
   memset(&hints, 0, sizeof(struct addrinfo));
-  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-  hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
-  hints.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
-  hints.ai_protocol = 0;          /* Any protocol */
-  hints.ai_canonname = NULL;
-  hints.ai_addr = NULL;
-  hints.ai_next = NULL;
+  hints.ai_family     = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
+  hints.ai_socktype   = SOCK_STREAM; /* Datagram socket */
+  hints.ai_flags      = AI_PASSIVE;    /* For wildcard IP address */
+  hints.ai_protocol   = 0;          /* Any protocol */
+  hints.ai_canonname  = NULL;
+  hints.ai_addr       = NULL;
+  hints.ai_next       = NULL;
   /* Initialize the addrinfo hints struct for the listener */
 
-  s = getaddrinfo(NULL, param_service, &hints, &result);
+  s = getaddrinfo(NULL, my_srv->service_str, &hints, &result);
+
   if (s != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
     exit(EXIT_FAILURE);
@@ -68,7 +71,18 @@ int my_server_init(char *param_service)
     exit(EXIT_FAILURE);
   }
 
-  fprintf(stdout, "Listening at %s:%s\n", "0.0.0.0", param_service);
+
+  if (listen(sfd, MAX_CONNECTIONS) == -1) {
+    /* For TCP only */
+    /* inet_ntop(AF_INET, rp, addr_str, sizeof(addr_str)),
+    get_port(rp->ai_addr)); */
+    perror("my_server_init() -> listen()");
+    close(sfd);
+    return -1;
+  }
+
+  my_srv->sfd = sfd;
+  fprintf(stdout, "Listening at %s:%s\n", my_srv->addr_str, my_srv->service_str);
   /* Displays server state */
 
   freeaddrinfo(result);
