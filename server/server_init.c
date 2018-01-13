@@ -25,14 +25,7 @@ int my_server_init(char *param_service)
   struct addrinfo           hints;
   struct addrinfo           *result, *rp;
   char                      addr_str[INET6_ADDRSTRLEN];
-  char                      host[NI_MAXHOST];
-  char                      service[NI_MAXSERV];
-
   int                       sfd, s;
-  struct sockaddr_storage   peer_addr;
-  socklen_t                 peer_addr_len;
-  ssize_t                   nread;
-  char                      buf[BUF_SIZE];
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
@@ -75,42 +68,8 @@ int my_server_init(char *param_service)
     exit(EXIT_FAILURE);
   }
 
-  s = getnameinfo( rp,
-    sizeof(*rp), host, NI_MAXHOST,
-    service, NI_MAXSERV, NI_NUMERICSERV | NI_NUMERICHOST);
-  if (s == 0) {
-    fprintf(stdout, "Listening at %s:%d\n", host, service);
-  }
-  else {
-    fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-  }
+  fprintf(stdout, "Listening at %s:%s\n", "0.0.0.0", param_service);
   /* Displays server state */
 
   freeaddrinfo(result);
-
-  /* Read datagrams and echo them back to sender */
-
-  for (;;) {
-    peer_addr_len = sizeof(struct sockaddr_storage);
-    nread = recvfrom(sfd, buf, BUF_SIZE, 0,
-      (struct sockaddr *) &peer_addr, &peer_addr_len);
-      if (nread == -1)
-      continue;               /* Ignore failed request */
-
-      char host[NI_MAXHOST], service[NI_MAXSERV];
-
-      s = getnameinfo((struct sockaddr *) &peer_addr,
-      peer_addr_len, host, NI_MAXHOST,
-      service, NI_MAXSERV, NI_NUMERICSERV);
-      if (s == 0)
-      printf("Received %ld bytes from %s:%s\n",
-      (long) nread, host, service);
-      else
-      fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-
-      if (sendto(sfd, buf, nread, 0,
-        (struct sockaddr *) &peer_addr,
-        peer_addr_len) != nread)
-        fprintf(stderr, "Error sending response\n");
-      }
-    }
+}
