@@ -1,6 +1,7 @@
 #include "client.hpp"
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <cstdio>
@@ -9,7 +10,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <string>
-
+#include <unistd.h>
 #include "ChaTTY_packets.h"
 
 ClientNet* ClientNet::singleton = nullptr;
@@ -42,15 +43,25 @@ ClientNet::ClientNet(const char* host, const char* user, const unsigned long por
 
 
     socketfd = socket(AF_INET, SOCK_STREAM, 0);
-
+bool ok = true;
     if(connect(socketfd, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof serv_addr) <0)
     {
+        ok = false;
         if(logMessage)
         {
             logMessage("Can't connect to server, connect failed");
             logMessage(host);
         }//handle error
     }
+
+    if(ok)
+    {
+        ChaTTY_PACKET_(NAME_TRANSPORT) packet;
+        strcpy(packet.name, user);
+        packet.packetType = NAME_TRANSPORT;
+        write(socketfd, ChaTTY_PACKET_SERIALIZE(&packet), sizeof packet);
+    }
+
 
 }
 
@@ -66,4 +77,28 @@ void ClientNet::hook_message_printing_fp(void (*fp)(const char*))
 
 void ClientNet::update()
 {
+    static int count;
+    static int bytes_read;
+    ioctl(socketfd, FIONREAD, &count);
+    //if(logMessage) logMessage(std::to_string(count).c_str());
+    if(count > 0)
+    {
+        bytes_read = read(socketfd, buffer.data(), count);
+
+        switch(buffer[0])
+        {
+            case MESSAGE_TRANSPORT:
+                {
+                    ChaTTY_PACKET_(MESSAGE_TRANSPORT)* packet =
+                        (ChaTTY_PACKET_(MESSAGE_TRANSPORT)*) buffer.data();
+
+                }
+                break;
+            case NAME_TRANSPORT:
+                break;
+            default:
+                logMessage("Unkonw packet type!");
+        }
+    }
 }
+

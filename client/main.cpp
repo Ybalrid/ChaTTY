@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
     UserInterface ui;
     const auto username = ui.ask_for_username();
     ClientNet::hook_message_printing_fp([](const char* msg)
-            {append_text_function_pointer("error", msg);});
+            {append_text_function_pointer("system", msg);});
 
 
     ClientNet network(hostname, username.c_str(), port);

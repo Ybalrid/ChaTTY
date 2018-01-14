@@ -1,7 +1,10 @@
 #pragma once
 
+#include "ChaTTY_packets.h"
+#include <array>
 class ClientNet
 {
+    std::array<byte_t, 2048> buffer;
     static ClientNet* singleton;
     static void (*logMessage)(const char*);
     int socketfd;
