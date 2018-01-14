@@ -59,7 +59,7 @@ ChaTTY_PACKET_(NAME_TRANSPORT)
 {
     ChaTTY_PACKET_HEADER
 
-    byte_t  names[1023];  /* \0 seperated \0\0 ended */
+    char  names[1023];  /* \0 seperated \0\0 ended */
 };
 
 ChaTTY_PACKET_(MESSAGE_TRANSPORT)
