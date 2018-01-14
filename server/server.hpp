@@ -41,7 +41,10 @@ int       my_server_unblock_socket(int);
 int       my_server_poll(s_my_server *);
 int       my_server_e_incoming_conn(s_my_server *);
 int       my_server_e_incoming_data(s_my_server *);
+int       my_server_e_close(s_my_server *);
 int       my_server_e_error(s_my_server *);
+int       my_server_add_client(s_my_server *, s_my_client *);
+int       my_server_remove_client(s_my_server *);
 int       my_server_send_motd(s_my_server *, s_my_client *);
 
 

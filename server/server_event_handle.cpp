@@ -29,12 +29,14 @@ int                         my_server_e_incoming_conn(s_my_server *my_srv) {
   client->cfd = accept(my_srv->sfd, (struct sockaddr *) &client->peer_addr, &client->peer_addr_len);
   /* TCP only: waits until a new connection is made */
   if (client->cfd < 0) {
-    if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
-      /* Prints error unless the reason is No more available incoming connection */
-      perror("accept()");
-    }
     free(client);
-    return (-2);
+
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      /* No more available incoming connection */
+      return (1);
+    }
+    perror("accept()");
+    return (-1);
   }
 
   s = my_server_unblock_socket(client->cfd);
@@ -56,9 +58,6 @@ int                         my_server_e_incoming_conn(s_my_server *my_srv) {
   }
   /* Adds the new client to the epoll */
 
-  my_srv->channel.clients.push_back(client);
-  /* Adds the fd to the channel */
-
   s = getnameinfo((struct sockaddr *) &client->peer_addr, client->peer_addr_len,
    client->addr_str, NI_MAXHOST, client->service_str, NI_MAXSERV, NI_NUMERICSERV);
   if (s == 0) {
@@ -70,6 +69,7 @@ int                         my_server_e_incoming_conn(s_my_server *my_srv) {
   /* Displays the state */
 
   my_server_send_motd(my_srv, client);
+  my_server_add_client(my_srv, client);
 
   return (0);
 }
@@ -82,25 +82,36 @@ int                         my_server_e_incoming_data(s_my_server *my_srv) {
 
   event = &my_srv->events[my_srv->curr_event_i];
   client = (s_my_client *)event->data.ptr;
-  nread = recv(client->cfd, buf, BUF_SIZE, 0 /* | MSG_DONTWAIT*/ );
-  /* TCP form to receive data */
-  /* UDP : nread = recvfrom(cfd, buf, BUF_SIZE, 0, (struct sockaddr *) &peer_addr, &peer_addr_len); */
 
-  if (nread == -1) {
-    return (-1);               /* Ignore failed request */
+  while ((nread = recv(client->cfd, buf, BUF_SIZE, 0 /* | MSG_DONTWAIT*/ )) > 0) {
+    /* Get all the buffer */
+
+    /* TCP form to receive data */
+    /* UDP : nread = recvfrom(cfd, buf, BUF_SIZE, 0, (struct sockaddr *) &peer_addr, &peer_addr_len); */
+    printf("Received %ld bytes from %s:%s\n", (long)nread, client->addr_str, client->service_str);
+
+    for (auto it: my_srv->channel.clients) {
+        printf("Broadcast to %s:%s\n", it->addr_str, it->service_str);
+        if (send(it->cfd, buf, nread, 0) != nread) {
+          /* UDP : sendto(cfd, buf, nread, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != nread */
+          fprintf(stderr, "Error sending response\n");
+        }
+    }
+    /* Broadcast for everybody in the channel */
   }
 
-  printf("Received %ld bytes from %s:%s\n", (long)nread, client->addr_str, client->service_str);
-
-
-  for (auto it: my_srv->channel.clients) {
-      printf("Broadcast to %s:%s\n", it->addr_str, it->service_str);
-      if (send(it->cfd, buf, nread, 0) != nread) {
-        /* UDP : sendto(cfd, buf, nread, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != nread */
-        fprintf(stderr, "Error sending response\n");
-      }
+  if (nread == -1 && errno != EAGAIN) {
+      perror("read");
+      return (-1);
   }
-  /* Broadcast for everybody in the channel */
+  /* Filter true errors */
+
+  if (nread == 0) {
+    fprintf(stdout, "Client %d has just exited.\n", client->cfd);
+    my_server_e_close(my_srv);
+  }
+  /* End of "file" */
+
 
   return (0);
 }
@@ -113,9 +124,68 @@ int                         my_server_e_error(s_my_server *my_srv) {
   client = (s_my_client *)event->data.ptr;
 
   fprintf(stderr, "Event error occurred on fd %d. Closing.\n", client->cfd);
+  my_server_e_close(my_srv);
+  return (0);
+}
+
+int                         my_server_e_close(s_my_server *my_srv) {
+  struct epoll_event        *event;
+  s_my_client               *client;
+
+  event = &my_srv->events[my_srv->curr_event_i];
+  client = (s_my_client *)event->data.ptr;
+
   close(client->cfd);
+  my_server_remove_client(my_srv);
   free(client);
+  return (0);
+}
+
+int                         my_server_add_client(s_my_server *my_srv, s_my_client *client) {
+  ssize_t                   nread;
+  char                      buf[BUF_SIZE];
+
+  my_srv->channel.clients.push_back(client);
+  /* Adds the client into the channel */
+
+  nread = snprintf(buf, BUF_SIZE, "Client %d has just joined.\n", client->cfd);
+  for (auto it: my_srv->channel.clients) {
+      printf("Broadcast to %s:%s\n", it->addr_str, it->service_str);
+      if (send(it->cfd, buf, nread, 0) != nread) {
+        /* UDP : sendto(cfd, buf, nread, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != nread */
+        fprintf(stderr, "Error sending message\n");
+      }
+  }
+  /* Broadcast for everybody in the channel */
+
+
+  return (0);
+}
+
+
+int                         my_server_remove_client(s_my_server *my_srv) {
+  ssize_t                   nread;
+  char                      buf[BUF_SIZE];
+  struct epoll_event        *event;
+  s_my_client               *client;
+
+  event = &my_srv->events[my_srv->curr_event_i];
+  client = (s_my_client *)event->data.ptr;
+
   my_srv->channel.clients.remove(client);
+
+  nread = snprintf(buf, BUF_SIZE, "Client %d has just left.\n", client->cfd);
+  for (auto it: my_srv->channel.clients) {
+      printf("Broadcast to %s:%s\n", it->addr_str, it->service_str);
+      if (send(it->cfd, buf, nread, 0) != nread) {
+        /* UDP : sendto(cfd, buf, nread, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != nread */
+        fprintf(stderr, "Error sending message\n");
+      }
+  }
+  /* Broadcast for everybody in the channel */
+
+
+  return (0);
 }
 
 int                         my_server_send_motd(s_my_server *my_srv, s_my_client *client) {
@@ -143,6 +213,8 @@ int                         my_server_send_motd(s_my_server *my_srv, s_my_client
     perror("read motd file");
     return (-1);
   }
+
+  close(motd_fd);
 
   return (0);
 }

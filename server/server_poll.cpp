@@ -28,8 +28,7 @@ int     my_server_poll(s_my_server *my_srv) {
         do {
           s = my_server_e_incoming_conn(my_srv);
         } while (s == 0);
-        if (s == -2 && !(errno == EAGAIN || errno == EWOULDBLOCK)) {
-          /* Prints only errors */
+        if (s == -1) {
           fprintf(stderr, " > in my_server_e_incoming_conn()\n");
         }
       }

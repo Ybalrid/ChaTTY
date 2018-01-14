@@ -28,5 +28,7 @@ int                 main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
   my_server_poll(&my_srv);
+  free(my_srv.events);
+  close(my_srv.sfd);
   return EXIT_SUCCESS;
 }
