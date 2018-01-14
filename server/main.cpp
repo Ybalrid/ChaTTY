@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
+#include <string.h>
 
 int                 main(int argc, char* argv[]) {
   s_my_server       my_srv;
@@ -20,7 +21,7 @@ int                 main(int argc, char* argv[]) {
   }
 
   my_srv.service_str  = argv[1];
-  my_srv.addr_str     = "0.0.0.0";
+  strncpy(my_srv.addr_str, "0.0.0.0", sizeof(my_srv.addr_str));
   my_srv.sfd          = -1;
 
   if (my_server_init(&my_srv) == -1) {
