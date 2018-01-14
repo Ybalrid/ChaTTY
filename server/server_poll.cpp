@@ -1,5 +1,6 @@
 #include <netdb.h>
 #include <sys/epoll.h>
+#include <errno.h>
 #include "ChaTTY_common.h"
 #include "ChaTTY_packets.h"
 #include "server.hpp"
@@ -7,6 +8,7 @@
 int     my_server_poll(s_my_server *my_srv) {
   int   n;
   int   i;
+  int   s;
 
   while (1) {
     n = epoll_wait(my_srv->efd, my_srv->events, MAX_EVENTS, -1);
@@ -20,11 +22,14 @@ int     my_server_poll(s_my_server *my_srv) {
       !(my_srv->events[i].events & EPOLLIN)) {
         /* Handle any error */
         my_server_e_error(my_srv);
-        continue;
       }
       else if (my_srv->events[i].data.fd == my_srv->sfd) {
         /* The server socket have incoming connection(s) */
-        if (my_server_e_incoming_conn(my_srv) == -1) {
+        do {
+          s = my_server_e_incoming_conn(my_srv);
+        } while (s == 0);
+        if (s == -2 && !(errno == EAGAIN || errno == EWOULDBLOCK)) {
+          /* Prints only errors */
           fprintf(stderr, " > in my_server_e_incoming_conn()\n");
         }
       }

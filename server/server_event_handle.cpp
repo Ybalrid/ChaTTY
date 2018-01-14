@@ -4,13 +4,17 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "ChaTTY_common.h"
 #include "ChaTTY_packets.h"
 #include "server.hpp"
 
 int                         my_server_e_incoming_conn(s_my_server *my_srv) {
-  int                       s, cfd;
+  int                       s;
   struct epoll_event        event;
   s_my_client               *client;
 
@@ -24,10 +28,13 @@ int                         my_server_e_incoming_conn(s_my_server *my_srv) {
   /* Avoid multiple calculation */
   client->cfd = accept(my_srv->sfd, (struct sockaddr *) &client->peer_addr, &client->peer_addr_len);
   /* TCP only: waits until a new connection is made */
-  if (cfd < 0) {
-    perror("accept()");
+  if (client->cfd < 0) {
+    if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
+      /* Prints error unless the reason is No more available incoming connection */
+      perror("accept()");
+    }
     free(client);
-    return (-1);
+    return (-2);
   }
 
   s = my_server_unblock_socket(client->cfd);
@@ -38,10 +45,8 @@ int                         my_server_e_incoming_conn(s_my_server *my_srv) {
   }
 
   event.data.ptr = client;
+  /* DO NOT FILL data.fd or it will overwrite data.ptr ! */
 
-  //event->data.fd = client->cfd;
-  printf("fd:%d\n", event.data.ptr);
-  fflush(stdout);
   event.events = EPOLLIN | EPOLLET;
   s = epoll_ctl(my_srv->efd, EPOLL_CTL_ADD, client->cfd, &event);
   if (s == -1) {
@@ -57,12 +62,14 @@ int                         my_server_e_incoming_conn(s_my_server *my_srv) {
   s = getnameinfo((struct sockaddr *) &client->peer_addr, client->peer_addr_len,
    client->addr_str, NI_MAXHOST, client->service_str, NI_MAXSERV, NI_NUMERICSERV);
   if (s == 0) {
-    printf("Incoming connection from %s:%s\n", client->addr_str, client->service_str);
+    printf("Incoming connection %d from %s:%s\n", client->cfd, client->addr_str, client->service_str);
   }
   else {
     fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
   }
   /* Displays the state */
+
+  my_server_send_motd(my_srv, client);
 
   return (0);
 }
@@ -83,7 +90,7 @@ int                         my_server_e_incoming_data(s_my_server *my_srv) {
     return (-1);               /* Ignore failed request */
   }
 
-  printf("Received %ld bytes from %s:%s\n", (long) nread, client->addr_str, client->service_str);
+  printf("Received %ld bytes from %s:%s\n", (long)nread, client->addr_str, client->service_str);
 
 
   for (auto it: my_srv->channel.clients) {
@@ -93,6 +100,7 @@ int                         my_server_e_incoming_data(s_my_server *my_srv) {
         fprintf(stderr, "Error sending response\n");
       }
   }
+  /* Broadcast for everybody in the channel */
 
   return (0);
 }
@@ -107,5 +115,34 @@ int                         my_server_e_error(s_my_server *my_srv) {
   fprintf(stderr, "Event error occurred on fd %d. Closing.\n", client->cfd);
   close(client->cfd);
   free(client);
-  //my_srv->channel.clients.insert(cfd);
+  my_srv->channel.clients.remove(client);
+}
+
+int                         my_server_send_motd(s_my_server *my_srv, s_my_client *client) {
+  ssize_t                   nread;
+  char                      buf[BUF_SIZE];
+  int                       motd_fd;
+
+  motd_fd = open(MOTD_FILE, O_RDONLY);
+  if (motd_fd < 0) {
+    perror("open motd file");
+    return (-1);
+  }
+  nread = snprintf(buf, BUF_SIZE, "Votre addresse de connexion est %s:%s\n", client->addr_str, client->service_str);
+  if (send(client->cfd, buf, nread, 0) != nread) {
+    fprintf(stderr, "Error sending MOTD\n");
+    return (-1);
+  }
+  while ((nread = read(motd_fd, buf, BUF_SIZE)) > 0) {
+    if (send(client->cfd, buf, nread, 0) != nread) {
+      fprintf(stderr, "Error sending MOTD\n");
+      return (-1);
+    }
+  }
+  if (nread < 0) {
+    perror("read motd file");
+    return (-1);
+  }
+
+  return (0);
 }

@@ -7,6 +7,7 @@
 #include <list>
 #define MAX_CONNECTIONS   SOMAXCONN
 #define MAX_EVENTS        42
+#define MOTD_FILE         "./motd.txt"
 
 typedef struct {
   int                       cfd;
@@ -41,6 +42,7 @@ int       my_server_poll(s_my_server *);
 int       my_server_e_incoming_conn(s_my_server *);
 int       my_server_e_incoming_data(s_my_server *);
 int       my_server_e_error(s_my_server *);
+int       my_server_send_motd(s_my_server *, s_my_client *);
 
 
 #endif
