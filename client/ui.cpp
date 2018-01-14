@@ -141,7 +141,8 @@ std::string UserInterface::ask_for_username()
         int input = getch();
         if(input == ERR) continue;
 
-        if(input == 127)
+        if(input == KEY_BACKSPACE
+                || input == 127)
         {
             if(!name.empty())
                 pop_back_utf8(name);
