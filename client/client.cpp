@@ -1,93 +1,133 @@
-#include <sys/types.h>
+#include "client.hpp"
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
 #include <netdb.h>
 #include <cstdio>
 #include <cstdlib>
-#include <unistd.h>
 #include <cstring>
-#include "ChaTTY_common.h"
+#include <errno.h>
+#include <arpa/inet.h>
+#include <string>
+#include <unistd.h>
 #include "ChaTTY_packets.h"
-#include "client.hpp"
 
+ClientNet* ClientNet::singleton = nullptr;
+void (*ClientNet::logMessage)(const char*) = nullptr;
 
-int my_client(int argc, char *argv[])
+ClientNet::ClientNet(const char* host, const char* user, const unsigned long port) :
+    socketfd{0},
+    display_chat{nullptr},
+    give_list{nullptr}
 {
-    struct addrinfo hints;
-    struct addrinfo *result, *rp;
-    int sfd, s, j;
-    size_t len;
-    ssize_t nread;
-    char buf[ChaTTY_PACKET_MAX_SIZE];
-
-   if (argc < 3) {
-        fprintf(stderr, "Usage: %s host port msg...\n", argv[0]);
-        exit(EXIT_FAILURE);
+    if(singleton)
+    {
+        fprintf(stderr, "can't have multiple ClientNet instances!");
+        exit(-1);
     }
-
-   /* Obtain address(es) matching host/port */
-
-   memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-    hints.ai_socktype = SOCK_STREAM; /* Datagram socket */
-    hints.ai_flags = 0;
-    hints.ai_protocol = 0;          /* Any protocol */
-
-   s = getaddrinfo(argv[1], argv[2], &hints, &result);
-    if (s != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
-        exit(EXIT_FAILURE);
-    }
-
-   /* getaddrinfo() returns a list of address structures.
-       Try each address until we successfully connect(2).
-       If socket(2) (or connect(2)) fails, we (close the socket
-       and) try the next address. */
-
-   for (rp = result; rp != NULL; rp = rp->ai_next) {
-        sfd = socket(rp->ai_family, rp->ai_socktype,
-                     rp->ai_protocol);
-        if (sfd == -1)
-            continue;
-
-       if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
-            break;                  /* Success */
-
-       close(sfd);
-    }
-
-   if (rp == NULL) {               /* No address succeeded */
-        fprintf(stderr, "Could not connect\n");
-        exit(EXIT_FAILURE);
-    }
-
-   freeaddrinfo(result);           /* No longer needed */
-
-   /* Send remaining command-line arguments as separate
-       datagrams, and read responses from server */
-
-   for (j = 3; j < argc; j++) {
-        len = strlen(argv[j]) + 1;
-                /* +1 for terminating null byte */
-
-       if (len + 1 > ChaTTY_PACKET_MAX_SIZE) {
-            fprintf(stderr,
-                    "Ignoring long message in argument %d\n", j);
-            continue;
+    username = std::string(user);
+    singleton = this;
+    //check if port is valid
+    if(!(port < 65536))
+    {
+        if(logMessage) {
+            logMessage("Port out of normal range!");
+            logMessage(std::to_string(port).c_str());
         }
+        //handle error...
+    }
+    struct hostent* server = gethostbyname(host);
+    struct sockaddr_in serv_addr;
+    memset(&serv_addr, '0', sizeof serv_addr);
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+    bcopy((char*)server->h_addr, (char*)&serv_addr.sin_addr.s_addr, server->h_length);
 
-       if (write(sfd, argv[j], len) != len) {
-            fprintf(stderr, "partial/failed write\n");
-            exit(EXIT_FAILURE);
-        }
 
-       nread = read(sfd, buf, ChaTTY_PACKET_MAX_SIZE);
-        if (nread == -1) {
-            perror("read");
-            exit(EXIT_FAILURE);
-        }
-
-       printf("Received %ld bytes: %s\n", (long) nread, buf);
+    socketfd = socket(AF_INET, SOCK_STREAM, 0);
+bool ok = true;
+    if(connect(socketfd, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof serv_addr) <0)
+    {
+        ok = false;
+        if(logMessage)
+        {
+            logMessage("Can't connect to server, connect failed");
+            logMessage(host);
+        }//handle error
     }
 
-   exit(EXIT_SUCCESS);
+    if(ok)
+    {
+        ChaTTY_PACKET_(NAME_TRANSPORT) packet;
+        memset(packet.names, '\0', strlen(user) + 2);
+        strcpy(packet.names, user);
+        packet.packetType = NAME_TRANSPORT;
+        write(socketfd, ChaTTY_PACKET_SERIALIZE(&packet), sizeof packet);
+    }
+}
+
+ClientNet& ClientNet::get_singleton()
+{
+    return *singleton;
+}
+
+void ClientNet::hook_message_printing_fp(void (*fp)(const char*))
+{
+    logMessage = fp;
+}
+
+void ClientNet::update()
+{
+    static int count;
+    static int bytes_read;
+    ioctl(socketfd, FIONREAD, &count);
+    //if(logMessage) logMessage(std::to_string(count).c_str());
+    if(count > 0)
+    {
+        bytes_read = read(socketfd, buffer.data(), count);
+
+        switch(buffer[0])
+        {
+            case MESSAGE_TRANSPORT:
+                {
+                    ChaTTY_PACKET_(MESSAGE_TRANSPORT)* packet =
+                        (ChaTTY_PACKET_(MESSAGE_TRANSPORT)*) buffer.data();
+                    if(display_chat)
+                    display_chat(packet->nickname, packet->message);
+
+                }
+                break;
+            case NAME_TRANSPORT:
+                {
+                    ChaTTY_PACKET_(NAME_TRANSPORT) * packet =
+                        (ChaTTY_PACKET_(NAME_TRANSPORT)*) buffer.data();
+                    if(give_list)
+                    give_list(packet->names);
+                }
+                break;
+            default:
+                logMessage("Unkonw packet type!");
+        }
+    }
+}
+
+
+void ClientNet::hook_display_chat(void (*fp)(const char*, const char*))
+{
+    display_chat = fp;
+}
+
+void ClientNet::send_to_server(const char* message)
+{
+    ChaTTY_PACKET_(MESSAGE_TRANSPORT) packet;
+    packet.packetType = MESSAGE_TRANSPORT;
+    strcpy(packet.message, message);
+    strcpy(packet.nickname, username.c_str());
+    write(socketfd, ChaTTY_PACKET_SERIALIZE(&packet), sizeof packet);
+}
+
+void ClientNet::hook_give_list(void (*fp)(const char*))
+{
+    give_list = fp;
 }
