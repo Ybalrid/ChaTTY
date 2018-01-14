@@ -7,7 +7,9 @@
 class UserInterface
 {
     static UserInterface* singleton;
-    std::string inputBuffer;
+    
+    using ustring = std::basic_string<unsigned char>;
+    ustring inputBuffer;
     bool stop;
 
     WINDOW* terminal;
@@ -19,7 +21,7 @@ class UserInterface
 
     std::vector<std::string> chatLogBuffer;
 
-    void send_to_server(std::string message);
+    void send_to_server(ustring message);
 
     void (*func_ptr_to_server)(const char*);
 

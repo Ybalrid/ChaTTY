@@ -66,9 +66,9 @@ void UserInterface::hook_send_messages(void (*fpointer)(const char*))
     func_ptr_to_server = fpointer;
 }
 
-void UserInterface::send_to_server(std::string message)
+void UserInterface::send_to_server(ustring message)
 {
-    if(func_ptr_to_server) func_ptr_to_server(message.c_str());
+    if(func_ptr_to_server) func_ptr_to_server(reinterpret_cast<const char*>(message.c_str()));
 }
 
 std::string UserInterface::ask_for_username()
@@ -157,8 +157,26 @@ void UserInterface::event_loop()
                 inputBuffer.pop_back(); //popping from empty string causes segfault
         }
         //TODO properly handler characters
-        if(input >= 32 && input <= 126)
-            inputBuffer.push_back(static_cast<char>(input));
+        else if(input >= 32 && input <= 126)
+            inputBuffer.push_back(static_cast<unsigned char>(input));
+        else if((input >> 5) & 0b110)
+        {
+            inputBuffer.push_back(static_cast<unsigned char>(input));
+            inputBuffer.push_back(static_cast<unsigned char>(getch()));
+        }
+        else if((input >> 4) & 0b1110)
+        {
+            inputBuffer.push_back(static_cast<unsigned char>(input));
+            inputBuffer.push_back(static_cast<unsigned char>(getch()));
+            inputBuffer.push_back(static_cast<unsigned char>(getch()));
+        }
+        else if((input >> 3) & 0b11110)
+        {
+            inputBuffer.push_back(static_cast<unsigned char>(input));
+            inputBuffer.push_back(static_cast<unsigned char>(getch()));
+            inputBuffer.push_back(static_cast<unsigned char>(getch()));
+            inputBuffer.push_back(static_cast<unsigned char>(getch()));
+        }
 
         if(input == '\n' || input == '\r')
         {
@@ -170,7 +188,7 @@ void UserInterface::event_loop()
     werase(inputLine);
     box(inputLine, 0, 0);
     wmove(inputLine, 1, 1);
-    wprintw(inputLine, inputBuffer.c_str());
+    wprintw(inputLine, reinterpret_cast<const char*>(inputBuffer.c_str()));
 }
 
 bool UserInterface::user_wants_to_quit()
