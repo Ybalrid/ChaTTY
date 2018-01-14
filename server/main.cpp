@@ -20,7 +20,7 @@ int                 main(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  my_srv.service_str  = argv[1];
+  strncpy(my_srv.service_str, argv[1], sizeof(my_srv.service_str));
   strncpy(my_srv.addr_str, "0.0.0.0", sizeof(my_srv.addr_str));
   my_srv.sfd          = -1;
 

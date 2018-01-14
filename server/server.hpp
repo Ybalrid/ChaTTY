@@ -32,8 +32,8 @@ typedef struct {
   int                 efd;            /* epoll event fd */
   struct epoll_event  *events;        /* epoll events list */
   int                 curr_event_i;   /* current epoll event index */
-  char                *service_str;   /* port */
-  char                *addr_str;      /* host */
+  char                service_str[NI_MAXSERV];   /* port */
+  char                addr_str[NI_MAXHOST];      /* host */
   s_my_channel        channel;       /* unique channel */
 }                     s_my_server;
 
