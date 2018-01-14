@@ -1,0 +1,5 @@
+==================== MOTD =======================
+* Bienvenue sur ce serveur ChaTTY !
+* Merci de dialoguer dans le respect de chacun.
+* Vous êtes connecté sur le salon principal.
+=================================================
