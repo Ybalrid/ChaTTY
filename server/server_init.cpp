@@ -118,6 +118,7 @@ int                   my_server_init_epoll(s_my_server *my_srv) {
   /* Adds the server socket to the event manager */
 
   my_srv->events = (epoll_event*)calloc(MAX_EVENTS, sizeof(*(my_srv->events)));
+  memset((void *)my_srv->events, 0, MAX_EVENTS * sizeof(*(my_srv->events)));
   /* Events storage init */
 
   return (0);

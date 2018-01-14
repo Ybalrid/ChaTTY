@@ -33,18 +33,40 @@ int                         my_server_sendto_client(s_my_client *client, byte_t 
   return (0);
 }
 
+int                       my_server_send_clients_list(s_my_channel *channel) {
+  ChaTTY_PACKET_(NAME_TRANSPORT) data;
+  unsigned int i;
+
+  memset((void *)&data, 0, sizeof(data));
+  data.packetType = (NAME_TRANSPORT);
+  i = 0;
+  for (auto client: channel->clients) {
+      if (i + strlen(client->nickname) + 2 > sizeof(data.names)) {
+        /* Too many clients */
+        fprintf(stderr, "Too many client in the channel! \n");
+        break ;
+      }
+      strncpy(data.names + i, client->nickname, sizeof(data.names) - i);
+      i += strlen(client->nickname) + 1;
+  }
+  data.names[i + 1] = '\0';
+  my_server_sendto_channel(channel, (byte_t*) &data, sizeof(data));
+}
+
 int                         my_server_send_motd(s_my_server *my_srv, s_my_client *client) {
   ssize_t                   nread;
   int                       motd_fd;
-  ChaTTY_PACKET_(MESSAGE_TRANSPORT) msg;
+  ChaTTY_PACKET_(MESSAGE_TRANSPORT) data;
 
-  msg.packetType = (MESSAGE_TRANSPORT);
-  strncpy(msg.nickname, SERVER_NAME, sizeof(msg.nickname));
-  nread = snprintf(msg.message, sizeof(msg.message), "Votre adresse de connexion est %s:%s\n", client->addr_str, client->service_str);
-  if (my_server_sendto_client(client, (byte_t *)&msg, sizeof(msg))) {
+  memset((void *)&data, 0, sizeof(data));
+  data.packetType = (MESSAGE_TRANSPORT);
+  strncpy(data.nickname, SERVER_NAME, sizeof(data.nickname));
+  nread = snprintf(data.message, sizeof(data.message), "Votre adresse de connexion est %s:%s\n", client->addr_str, client->service_str);
+  if (my_server_sendto_client(client, (byte_t *)&data, sizeof(data))) {
     fprintf(stderr, "Error sending MOTD\n");
     return (-1);
   }
+  return (0);
 
   motd_fd = open(MOTD_FILE, O_RDONLY);
   if (motd_fd < 0) {
@@ -52,8 +74,8 @@ int                         my_server_send_motd(s_my_server *my_srv, s_my_client
     return (-1);
   }
 
-  while ((nread = read(motd_fd, msg.message, sizeof(msg.message))) > 0) {
-    if (my_server_sendto_client(client, (byte_t *)&msg, sizeof(msg))) {
+  while ((nread = read(motd_fd, data.message, sizeof(data.message))) > 0) {
+    if (my_server_sendto_client(client, (byte_t *)&data, sizeof(data))) {
       fprintf(stderr, "Error sending MOTD\n");
       close(motd_fd);
       return (-1);

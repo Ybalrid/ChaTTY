@@ -69,7 +69,7 @@ int                         my_server_e_incoming_conn(s_my_server *my_srv) {
   }
   /* Displays the state */
 
-  //y_server_send_motd(my_srv, client);
+  //my_server_send_motd(my_srv, client);
 
   return (0);
 }
@@ -107,6 +107,7 @@ int                         my_server_e_incoming_data(s_my_server *my_srv) {
           strncpy(client->nickname, ((ChaTTY_PACKET_(NAME_TRANSPORT)*)&buf)->names, sizeof(client->nickname));
           if (!(std::find(my_srv->channel.clients.begin(), my_srv->channel.clients.end(), client) != my_srv->channel.clients.end())) {
             my_server_channel_join(&my_srv->channel, client);
+            //my_server_send_motd(my_srv, client);
           }
           else {
             // TODO Notif updated nickname
@@ -191,7 +192,7 @@ int                         my_server_channel_join(s_my_channel *channel, s_my_c
   data.packetType = (MESSAGE_TRANSPORT);
   strncpy(data.nickname, SERVER_NAME, sizeof(data.nickname));
   snprintf(data.message, sizeof(data.message), "%s vient de nous rejoindre.\n", client->nickname);
-  my_server_sendto_channel(channel, (byte_t *)&data, sizeof(data));
+  //my_server_sendto_channel(channel, (byte_t *)&data, sizeof(data));
   return (0);
 }
 
@@ -207,29 +208,9 @@ int                         my_server_channel_quit(s_my_channel *channel, s_my_c
   data.packetType = (MESSAGE_TRANSPORT);
   strncpy(data.nickname, SERVER_NAME, sizeof(data.nickname));
   snprintf(data.message, sizeof(data.message), "%s vient de nous quitter pour un autre monde...\n", client->nickname);
-  my_server_sendto_channel(channel, (byte_t *)&data, sizeof(data));
 
   my_server_send_clients_list(channel);
+  //my_server_sendto_channel(channel, (byte_t *)&data, sizeof(data));
 
   return (0);
-}
-
-int                       my_server_send_clients_list(s_my_channel *channel) {
-  ChaTTY_PACKET_(NAME_TRANSPORT) data;
-  unsigned int i;
-
-  memset((void *)&data, 0, sizeof(data));
-  data.packetType = (NAME_TRANSPORT);
-  i = 0;
-  for (auto client: channel->clients) {
-      if (i + strlen(client->nickname) + 2 > sizeof(data.names)) {
-        /* Too many clients */
-        fprintf(stderr, "Too many client in the channel! \n");
-        break ;
-      }
-      strncpy(data.names + i, client->nickname, sizeof(data.names) - i);
-      i += strlen(client->nickname) + 1;
-  }
-  data.names[i + 1] = '\0';
-  my_server_sendto_channel(channel, (byte_t*) &data, sizeof(data));
 }
