@@ -2,7 +2,10 @@
 #include <ncurses.h>
 
 UserInterface::UserInterface() :
-    stop{false}
+    stop{false},
+    maxx{0},
+    maxy{0},
+    func_ptr_to_server{nullptr}
 {
     //Init ncurses
     terminal = initscr();
@@ -43,9 +46,14 @@ UserInterface::~UserInterface()
     endwin();
 }
 
+void UserInterface::hook_send_messages(void (*fpointer)(const char*))
+{
+    func_ptr_to_server = fpointer;
+}
 
 void UserInterface::send_to_server(std::string message)
 {
+    if(func_ptr_to_server) func_ptr_to_server(message.c_str());
 }
 
 std::string UserInterface::ask_for_username()
