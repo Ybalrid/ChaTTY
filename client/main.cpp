@@ -22,21 +22,10 @@ void sanityCheck()
     printf("lengh is : %d\n", byteLenght);
 }
 
-    auto append_text_function_pointer = [](const char* username, const char* message) {
-        UserInterface::get_singleton().display_message(
-                reinterpret_cast<const unsigned char*>(username),
-                reinterpret_cast<const unsigned char*>(message));
-    };
-void loop(const char* message)
-{
-    append_text_function_pointer("myself", message);
-}
 int main(int argc, char* argv[])
 {
-    //set locale
-    setlocale(LC_ALL, "");
     std::cout << "I'm in C++ \\o/\n";
-
+    my_client(argc, argv);
     if(argc < 3)
     {
         puts("Please specify server address as first argument");
@@ -48,22 +37,12 @@ int main(int argc, char* argv[])
     const unsigned long port = getPortFromStr(argv[2]);
     printf("Will connect to %s:%u\n", hostname, port);
 
-    UserInterface ui;
-    const auto username = ui.ask_for_username();
-
-    //Init network here
-    ui.hook_send_messages(loop);
-    //Give the UI a pointer to the function for sending messages to the server
-    //Give the network code a function for giving received messages to the UI for display
-
+    init_ui();
     bool run = true;
     while(run)
     {
-        ui.event_loop();
-
-        //Do network transaction here
-
-        if(ui.user_wants_to_quit() || false /*network lost*/)
+        event_loop();
+        if(user_wants_to_quit() || false /*network lost*/)
         {
             run = false;
         }
