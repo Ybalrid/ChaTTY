@@ -34,7 +34,10 @@ int     my_server_poll(s_my_server *my_srv) {
       }
       else {
         /* Incoming data from a client */
-        if (my_server_e_incoming_data(my_srv) == -1) {
+        do {
+          s = my_server_e_incoming_data(my_srv);
+        } while (s == 0);
+        if (s == -1) {
           fprintf(stderr, " > in my_server_e_incoming_data()\n");
         }
       }

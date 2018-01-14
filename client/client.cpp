@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <cstring>
 #include "ChaTTY_common.h"
+#include "ChaTTY_packets.h"
 #include "client.hpp"
 
 
@@ -16,7 +17,7 @@ int my_client(int argc, char *argv[])
     int sfd, s, j;
     size_t len;
     ssize_t nread;
-    char buf[BUF_SIZE];
+    char buf[ChaTTY_PACKET_MAX_SIZE];
 
    if (argc < 3) {
         fprintf(stderr, "Usage: %s host port msg...\n", argv[0]);
@@ -68,7 +69,7 @@ int my_client(int argc, char *argv[])
         len = strlen(argv[j]) + 1;
                 /* +1 for terminating null byte */
 
-       if (len + 1 > BUF_SIZE) {
+       if (len + 1 > ChaTTY_PACKET_MAX_SIZE) {
             fprintf(stderr,
                     "Ignoring long message in argument %d\n", j);
             continue;
@@ -79,7 +80,7 @@ int my_client(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
 
-       nread = read(sfd, buf, BUF_SIZE);
+       nread = read(sfd, buf, ChaTTY_PACKET_MAX_SIZE);
         if (nread == -1) {
             perror("read");
             exit(EXIT_FAILURE);

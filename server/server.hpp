@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <list>
+#include "ChaTTY_packets.h"
+
 #define MAX_CONNECTIONS   SOMAXCONN
 #define MAX_EVENTS        42
 #define MOTD_FILE         "./motd.txt"
@@ -19,10 +21,10 @@ typedef struct {
 }                           s_my_client;
 
 typedef struct {
-  int             id;
-  char            *name;
+  int                       id;
+  char                      *name;
   std::list<s_my_client *>  clients;
-}                 s_my_channel;
+}                           s_my_channel;
 
 typedef struct {
   int                 sfd;            /* server fd */
@@ -46,6 +48,6 @@ int       my_server_e_error(s_my_server *);
 int       my_server_add_client(s_my_server *, s_my_client *);
 int       my_server_remove_client(s_my_server *);
 int       my_server_send_motd(s_my_server *, s_my_client *);
-
+int       my_server_sendto_channel(s_my_server *, s_my_channel *, byte_t *data, ssize_t len);
 
 #endif

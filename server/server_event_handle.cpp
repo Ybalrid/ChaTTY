@@ -75,34 +75,61 @@ int                         my_server_e_incoming_conn(s_my_server *my_srv) {
 }
 
 int                         my_server_e_incoming_data(s_my_server *my_srv) {
-  ssize_t                   nread;
-  char                      buf[BUF_SIZE];
   struct epoll_event        *event;
   s_my_client               *client;
+  ssize_t                   nread;
+  byte_t                    buf[ChaTTY_PACKET_MAX_SIZE];
+  int                       s;
 
   event = &my_srv->events[my_srv->curr_event_i];
   client = (s_my_client *)event->data.ptr;
 
-  while ((nread = recv(client->cfd, buf, BUF_SIZE, 0 /* | MSG_DONTWAIT*/ )) > 0) {
-    /* Get all the buffer */
+  nread = recv(client->cfd, buf, ChaTTY_PACKET_MAX_SIZE, MSG_DONTWAIT);
+  /* Get data type */
+  /* UDP : nread = recvfrom(cfd, buf, BUF_SIZE, 0, (struct sockaddr *) &peer_addr, &peer_addr_len); */
 
-    /* TCP form to receive data */
-    /* UDP : nread = recvfrom(cfd, buf, BUF_SIZE, 0, (struct sockaddr *) &peer_addr, &peer_addr_len); */
-    printf("Received %ld bytes from %s:%s\n", (long)nread, client->addr_str, client->service_str);
-
-    for (auto it: my_srv->channel.clients) {
-        printf("Broadcast to %s:%s\n", it->addr_str, it->service_str);
-        if (send(it->cfd, buf, nread, 0) != nread) {
-          /* UDP : sendto(cfd, buf, nread, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != nread */
-          fprintf(stderr, "Error sending response\n");
+  s = 0;
+  if (nread > 0) {
+    switch (buf[0]) {
+      
+      case (MESSAGE_TRANSPORT):
+        if (nread == ChaTTY_PACKET_SIZE(MESSAGE_TRANSPORT)) {
+          my_server_sendto_channel(my_srv, &my_srv->channel, buf, ChaTTY_PACKET_SIZE(MESSAGE_TRANSPORT));
         }
+        else {
+          s = 1;
+        }
+      break;
+
+      case (NAME_TRANSPORT):
+        if (nread == ChaTTY_PACKET_SIZE(MESSAGE_TRANSPORT)) {
+          //TODO Update client names
+        }
+        else {
+          s = 1;
+        }
+      break;
+
+      default:
+        fprintf(stderr, "Unknown type %u received from %s:%s\n", buf[0], client->addr_str, client->service_str);
+        my_server_e_close(my_srv);
+        return (-1);
     }
-    /* Broadcast for everybody in the channel */
+
+    fprintf(stdout, "Received %u bytes of type %u from %s:%s\n", nread, buf[0], client->addr_str, client->service_str);
+  }
+
+
+  if (s == 1) {
+    fprintf(stderr, "Invalid data size %u for type %u received from %s:%s\n", nread, buf[0], client->addr_str, client->service_str);
+    my_server_e_close(my_srv);
+    return (-1);
   }
 
   if (nread == -1 && errno != EAGAIN) {
-      perror("read");
-      return (-1);
+    perror("recv");
+    my_server_e_close(my_srv);
+    return (-1);
   }
   /* Filter true errors */
 
@@ -143,12 +170,12 @@ int                         my_server_e_close(s_my_server *my_srv) {
 
 int                         my_server_add_client(s_my_server *my_srv, s_my_client *client) {
   ssize_t                   nread;
-  char                      buf[BUF_SIZE];
+  char                      buf[ChaTTY_PACKET_MAX_SIZE];
 
   my_srv->channel.clients.push_back(client);
   /* Adds the client into the channel */
 
-  nread = snprintf(buf, BUF_SIZE, "Client %d has just joined.\n", client->cfd);
+  nread = snprintf(buf, sizeof(buf), "Client %d has just joined.\n", client->cfd);
   for (auto it: my_srv->channel.clients) {
       printf("Broadcast to %s:%s\n", it->addr_str, it->service_str);
       if (send(it->cfd, buf, nread, 0) != nread) {
@@ -165,7 +192,7 @@ int                         my_server_add_client(s_my_server *my_srv, s_my_clien
 
 int                         my_server_remove_client(s_my_server *my_srv) {
   ssize_t                   nread;
-  char                      buf[BUF_SIZE];
+  char                      buf[ChaTTY_PACKET_MAX_SIZE];
   struct epoll_event        *event;
   s_my_client               *client;
 
@@ -174,7 +201,7 @@ int                         my_server_remove_client(s_my_server *my_srv) {
 
   my_srv->channel.clients.remove(client);
 
-  nread = snprintf(buf, BUF_SIZE, "Client %d has just left.\n", client->cfd);
+  nread = snprintf(buf, sizeof(buf), "Client %d has just left.\n", client->cfd);
   for (auto it: my_srv->channel.clients) {
       printf("Broadcast to %s:%s\n", it->addr_str, it->service_str);
       if (send(it->cfd, buf, nread, 0) != nread) {
@@ -184,39 +211,6 @@ int                         my_server_remove_client(s_my_server *my_srv) {
   }
   /* Broadcast for everybody in the channel */
 
-
-  return (0);
-}
-
-int                         my_server_send_motd(s_my_server *my_srv, s_my_client *client) {
-  ssize_t                   nread;
-  char                      buf[BUF_SIZE];
-  int                       motd_fd;
-
-  nread = snprintf(buf, BUF_SIZE, "Votre addresse de connexion est %s:%s\n", client->addr_str, client->service_str);
-  if (send(client->cfd, buf, nread, 0) != nread) {
-    fprintf(stderr, "Error sending MOTD\n");
-    return (-1);
-  }
-
-  motd_fd = open(MOTD_FILE, O_RDONLY);
-  if (motd_fd < 0) {
-    perror("open motd file");
-    return (-1);
-  }
-
-  while ((nread = read(motd_fd, buf, BUF_SIZE)) > 0) {
-    if (send(client->cfd, buf, nread, 0) != nread) {
-      fprintf(stderr, "Error sending MOTD\n");
-      return (-1);
-    }
-  }
-  if (nread < 0) {
-    perror("read motd file");
-    return (-1);
-  }
-
-  close(motd_fd);
 
   return (0);
 }
