@@ -21,7 +21,7 @@ void UserInterface::yank_buddies_to_screen()
     int maxx, maxy;
     getmaxy(buddyList);
 
-    for(int i = std::max(0, (int)(buddies.size() - (maxy - 2)));
+    for(int i = 0 /*std::max(0, (int)(buddies.size() - (maxy - 2)))*/;
             i < buddies.size();
             i++)
     {
@@ -134,7 +134,7 @@ std::string UserInterface::ask_for_username()
     wrefresh(chatLog);
     wrefresh(inputLine);
 
-    std::string name;
+    ustring name;
     bool finished = false;
     while(!finished)
     {
@@ -144,22 +144,39 @@ std::string UserInterface::ask_for_username()
         if(input == 127)
         {
             if(!name.empty())
-                name.pop_back();
+                pop_back_utf8(name);
         }
-        if(input >= 32 && input <= 126)
+        else if(input >= 32 && input <= 126) //ASCII, delete char removed
+            name.push_back(static_cast<unsigned char>(input));
+        else if((input & 0xE0) == 0xC0) //2 bytes encoded UTF-8 codepoint
         {
-            name.push_back(static_cast<char>(input));
+            name.push_back(static_cast<unsigned char>(input));
+            name.push_back(static_cast<unsigned char>(getch()));
         }
+        else if((input & 0xF0) == 0xE0) //3 bytes encoded UTF-8 codepoint
+        {
+            name.push_back(static_cast<unsigned char>(input));
+            name.push_back(static_cast<unsigned char>(getch()));
+            name.push_back(static_cast<unsigned char>(getch()));
+        }
+        else if((input & 0xF8) == 0xF0) //4 bytes encoded UTF-8 codepoint
+        {
+            name.push_back(static_cast<unsigned char>(input));
+            name.push_back(static_cast<unsigned char>(getch()));
+            name.push_back(static_cast<unsigned char>(getch()));
+            name.push_back(static_cast<unsigned char>(getch()));
+        }
+
         if(input == '\n' || input == '\r')
         {
-            if(!name.empty())
-                finished = true;
+            finished = true;
         }
+
 
         werase(inputLine);
         box(inputLine, 0, 0);
         wmove(inputLine, 1, 1);
-        wprintw(inputLine, name.c_str());
+        wprintw(inputLine, reinterpret_cast<const char*>(name.c_str()));
         refresh();
         wrefresh(inputLine);
     }
@@ -173,7 +190,7 @@ std::string UserInterface::ask_for_username()
     wrefresh(inputLine);
     wmove(inputLine, 1, 1);
 
-    return name;
+    return reinterpret_cast<const char *>(name.c_str());
 }
 
 void UserInterface::event_loop()
