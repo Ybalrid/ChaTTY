@@ -53,11 +53,13 @@ int main(int argc, char* argv[])
     ClientNet::hook_message_printing_fp([](const char* msg)
             {append_text_function_pointer("system", msg);});
 
-
     ClientNet network(hostname, username.c_str(), port);
+    network.hook_display_chat(append_text_function_pointer);
 
     //Init network here
-    ui.hook_send_messages(loop);
+    ui.hook_send_messages([](const char* msg){
+            ClientNet::get_singleton().send_to_server(msg);
+            });
     //Give the UI a pointer to the function for sending messages to the server
     //Give the network code a function for giving received messages to the UI for display
 

@@ -21,11 +21,11 @@ file(GLOB ChaTTY_Sources_server server/*.cpp)
 file(GLOB ChaTTY_Headers_server common/*.h server/*.hpp)
 
 add_executable(ChaTTY ${ChaTTY_Sources} ${ChaTTY_Headers})
-add_executable(ChaTTYd ${ChaTTY_Sources_server} ${ChaTTY_Headers_server})
+#add_executable(ChaTTYd ${ChaTTY_Sources_server} ${ChaTTY_Headers_server})
 
 target_link_libraries(ChaTTY
     ${CURSES_LIBRARIES}
     )
 
 target_include_directories(ChaTTY PRIVATE client/)
-target_include_directories(ChaTTYd PRIVATE server/)
+#target_include_directories(ChaTTYd PRIVATE server/)

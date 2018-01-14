@@ -16,14 +16,15 @@
 ClientNet* ClientNet::singleton = nullptr;
 void (*ClientNet::logMessage)(const char*) = nullptr;
 ClientNet::ClientNet(const char* host, const char* user, const unsigned long port) :
-    socketfd{0}
+    socketfd{0},
+    display_chat{nullptr}
 {
     if(singleton)
     {
         fprintf(stderr, "can't have multiple ClientNet instances!");
         exit(-1);
     }
-
+    username = user;
     singleton = this;
     //check if port is valid
     if(!(port < 65536))
@@ -57,7 +58,8 @@ bool ok = true;
     if(ok)
     {
         ChaTTY_PACKET_(NAME_TRANSPORT) packet;
-        strcpy(packet.name, user);
+        memset(packet.names, '\0', strlen(user) + 2);
+        strcpy(packet.names, user);
         packet.packetType = NAME_TRANSPORT;
         write(socketfd, ChaTTY_PACKET_SERIALIZE(&packet), sizeof packet);
     }
@@ -91,6 +93,7 @@ void ClientNet::update()
                 {
                     ChaTTY_PACKET_(MESSAGE_TRANSPORT)* packet =
                         (ChaTTY_PACKET_(MESSAGE_TRANSPORT)*) buffer.data();
+                    display_chat(packet->nickname, packet->message);
 
                 }
                 break;
@@ -102,3 +105,17 @@ void ClientNet::update()
     }
 }
 
+
+void ClientNet::hook_display_chat(void (*fp)(const char*, const char*))
+{
+    display_chat = fp;
+}
+
+void ClientNet::send_to_server(const char* message)
+{
+    ChaTTY_PACKET_(MESSAGE_TRANSPORT) packet;
+    packet.packetType = MESSAGE_TRANSPORT;
+    strcpy(packet.message, message);
+    strcpy(packet.nickname, username.c_str());
+    write(socketfd, ChaTTY_PACKET_SERIALIZE(&packet), sizeof packet);
+}
