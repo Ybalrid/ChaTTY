@@ -107,6 +107,7 @@ int                   my_server_init_epoll(s_my_server *my_srv) {
   }
   /* Creates the epoll instance */
 
+  memset((void *)&event, 0, sizeof(event));
   event.data.fd = my_srv->sfd;
   event.events = EPOLLIN | EPOLLET;
   s = epoll_ctl(my_srv->efd, EPOLL_CTL_ADD, my_srv->sfd, &event);

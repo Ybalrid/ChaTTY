@@ -1,4 +1,5 @@
 #include <list>
+#include <algorithm>
 
 #include <sys/socket.h>
 #include <netdb.h>
@@ -68,8 +69,7 @@ int                         my_server_e_incoming_conn(s_my_server *my_srv) {
   }
   /* Displays the state */
 
-  my_server_send_motd(my_srv, client);
-  my_server_add_client(my_srv, client);
+  //y_server_send_motd(my_srv, client);
 
   return (0);
 }
@@ -91,10 +91,11 @@ int                         my_server_e_incoming_data(s_my_server *my_srv) {
   s = 0;
   if (nread > 0) {
     switch (buf[0]) {
-      
+
       case (MESSAGE_TRANSPORT):
         if (nread == ChaTTY_PACKET_SIZE(MESSAGE_TRANSPORT)) {
-          my_server_sendto_channel(my_srv, &my_srv->channel, buf, ChaTTY_PACKET_SIZE(MESSAGE_TRANSPORT));
+            strncpy(((ChaTTY_PACKET_(MESSAGE_TRANSPORT)*)&buf)->nickname, client->nickname, sizeof(((ChaTTY_PACKET_(MESSAGE_TRANSPORT)*)&buf)->nickname));
+            my_server_sendto_channel(&my_srv->channel, buf, ChaTTY_PACKET_SIZE(MESSAGE_TRANSPORT));
         }
         else {
           s = 1;
@@ -102,8 +103,15 @@ int                         my_server_e_incoming_data(s_my_server *my_srv) {
       break;
 
       case (NAME_TRANSPORT):
-        if (nread == ChaTTY_PACKET_SIZE(MESSAGE_TRANSPORT)) {
-          //TODO Update client names
+        if (nread == ChaTTY_PACKET_SIZE(NAME_TRANSPORT)) {
+          strncpy(client->nickname, ((ChaTTY_PACKET_(NAME_TRANSPORT)*)&buf)->names, sizeof(client->nickname));
+          if (!(std::find(my_srv->channel.clients.begin(), my_srv->channel.clients.end(), client) != my_srv->channel.clients.end())) {
+            my_server_channel_join(&my_srv->channel, client);
+          }
+          else {
+            // TODO Notif updated nickname
+          }
+          my_server_send_clients_list(&my_srv->channel);
         }
         else {
           s = 1;
@@ -133,13 +141,17 @@ int                         my_server_e_incoming_data(s_my_server *my_srv) {
   }
   /* Filter true errors */
 
+  if (nread == -1 && errno == EAGAIN) {
+    return (1);
+  }
+  /* No more data in buffer */
+
   if (nread == 0) {
     fprintf(stdout, "Client %d has just exited.\n", client->cfd);
     my_server_e_close(my_srv);
+    return (1);
   }
   /* End of "file" */
-
-
   return (0);
 }
 
@@ -163,54 +175,61 @@ int                         my_server_e_close(s_my_server *my_srv) {
   client = (s_my_client *)event->data.ptr;
 
   close(client->cfd);
-  my_server_remove_client(my_srv);
+  my_server_channel_quit(&my_srv->channel, client);
   free(client);
   return (0);
 }
 
-int                         my_server_add_client(s_my_server *my_srv, s_my_client *client) {
-  ssize_t                   nread;
-  char                      buf[ChaTTY_PACKET_MAX_SIZE];
+int                         my_server_channel_join(s_my_channel *channel, s_my_client *client) {
+  int                       motd_fd;
+  ChaTTY_PACKET_(MESSAGE_TRANSPORT) data;
 
-  my_srv->channel.clients.push_back(client);
+  channel->clients.push_back(client);
   /* Adds the client into the channel */
 
-  nread = snprintf(buf, sizeof(buf), "Client %d has just joined.\n", client->cfd);
-  for (auto it: my_srv->channel.clients) {
-      printf("Broadcast to %s:%s\n", it->addr_str, it->service_str);
-      if (send(it->cfd, buf, nread, 0) != nread) {
-        /* UDP : sendto(cfd, buf, nread, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != nread */
-        fprintf(stderr, "Error sending message\n");
-      }
-  }
-  /* Broadcast for everybody in the channel */
-
-
+  memset((void *)&data, 0, sizeof(data));
+  data.packetType = (MESSAGE_TRANSPORT);
+  strncpy(data.nickname, SERVER_NAME, sizeof(data.nickname));
+  snprintf(data.message, sizeof(data.message), "%s vient de nous rejoindre.\n", client->nickname);
+  my_server_sendto_channel(channel, (byte_t *)&data, sizeof(data));
   return (0);
 }
 
 
-int                         my_server_remove_client(s_my_server *my_srv) {
-  ssize_t                   nread;
-  char                      buf[ChaTTY_PACKET_MAX_SIZE];
-  struct epoll_event        *event;
-  s_my_client               *client;
+int                         my_server_channel_quit(s_my_channel *channel, s_my_client *client) {
+  int                       motd_fd;
+  ChaTTY_PACKET_(MESSAGE_TRANSPORT) data;
 
-  event = &my_srv->events[my_srv->curr_event_i];
-  client = (s_my_client *)event->data.ptr;
+  channel->clients.remove(client);
+  /* Removes the client from the channel */
 
-  my_srv->channel.clients.remove(client);
+  memset((void *)&data, 0, sizeof(data));
+  data.packetType = (MESSAGE_TRANSPORT);
+  strncpy(data.nickname, SERVER_NAME, sizeof(data.nickname));
+  snprintf(data.message, sizeof(data.message), "%s vient de nous quitter pour un autre monde...\n", client->nickname);
+  my_server_sendto_channel(channel, (byte_t *)&data, sizeof(data));
 
-  nread = snprintf(buf, sizeof(buf), "Client %d has just left.\n", client->cfd);
-  for (auto it: my_srv->channel.clients) {
-      printf("Broadcast to %s:%s\n", it->addr_str, it->service_str);
-      if (send(it->cfd, buf, nread, 0) != nread) {
-        /* UDP : sendto(cfd, buf, nread, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != nread */
-        fprintf(stderr, "Error sending message\n");
-      }
-  }
-  /* Broadcast for everybody in the channel */
-
+  my_server_send_clients_list(channel);
 
   return (0);
+}
+
+int                       my_server_send_clients_list(s_my_channel *channel) {
+  ChaTTY_PACKET_(NAME_TRANSPORT) data;
+  unsigned int i;
+
+  memset((void *)&data, 0, sizeof(data));
+  data.packetType = (NAME_TRANSPORT);
+  i = 0;
+  for (auto client: channel->clients) {
+      if (i + strlen(client->nickname) + 2 > sizeof(data.names)) {
+        /* Too many clients */
+        fprintf(stderr, "Too many client in the channel! \n");
+        break ;
+      }
+      strncpy(data.names + i, client->nickname, sizeof(data.names) - i);
+      i += strlen(client->nickname) + 1;
+  }
+  data.names[i + 1] = '\0';
+  my_server_sendto_channel(channel, (byte_t*) &data, sizeof(data));
 }
