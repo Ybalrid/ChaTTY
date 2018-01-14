@@ -5,7 +5,6 @@
 
 int main(int argc, char* argv[])
 {
-    my_server(argc, argv);
     if(argc < 2)
     {
         fprintf(stderr, "Usage: %s port\n", argv[0]);
