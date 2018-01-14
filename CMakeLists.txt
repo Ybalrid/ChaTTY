@@ -11,7 +11,7 @@ include_directories(
     ${CURSES_INCLUDE_DIR}
     )
 
-file(GLOB ChaTTY_Sources src/*.c)
+file(GLOB ChaTTY_Sources src/*.cpp)
 file(GLOB ChaTTY_Headers includes/*.h)
 
 add_executable(ChaTTY ${ChaTTY_Sources} ${ChaTTY_Headers})

@@ -1,33 +1,30 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
 
 #include <ncurses.h>
 
 void tryNcurses()
 {
+    setlocale(LC_ALL, "");
     initscr();
     start_color();
     init_pair(1, COLOR_RED, COLOR_BLACK);
     attron(COLOR_PAIR(1));
     curs_set(2);
-    raw();
+    cbreak();
     keypad(stdscr, TRUE);
     noecho();
-
-    printw("Type any character to see it in bold\n");
+while(1)
+{
     int ch = getch();
 
-    if(ch == KEY_F(1))
-        printw("F1 has been pressed!");
-    else
-    {
-        printw("The pressed key is ");
         attron(A_BOLD);
-        printw("%c", ch);
+        printw("%d\n", ch);
         attroff(A_BOLD);
-    }
 
     refresh();
+}
     getch();
     endwin();
 }
