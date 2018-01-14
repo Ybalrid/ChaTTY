@@ -31,7 +31,6 @@ void UserInterface::display_message(const unsigned char* username, const unsigne
 {
     ustring s_username{username};
     ustring s_message{message};
-
     ustring to_add = s_username + reinterpret_cast<const unsigned char*>(": ") + s_message;
     chatLogBuffer.push_back(to_add);
 }
@@ -167,7 +166,7 @@ void UserInterface::event_loop()
     box(chatLog, 0, 0);
     wmove(chatLog, 1, 1);
     yank_chat_log_to_screen();
-    
+
     werase(inputLine);
     box(inputLine, 0, 0);
     wmove(inputLine, 1, 1);
