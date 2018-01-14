@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 #include "ChaTTY_packets.h"
 #include "ChaTTY_common.h"
@@ -22,11 +23,12 @@ void sanityCheck()
     printf("lengh is : %d\n", byteLenght);
 }
 
-    auto append_text_function_pointer = [](const char* username, const char* message) {
+auto append_text_function_pointer = [](const char* username, const char* message)
+{
         UserInterface::get_singleton().display_message(
                 reinterpret_cast<const unsigned char*>(username),
                 reinterpret_cast<const unsigned char*>(message));
-    };
+};
 void loop(const char* message)
 {
     append_text_function_pointer("myself", message);
@@ -49,7 +51,7 @@ int main(int argc, char* argv[])
     printf("Will connect to %s:%u\n", hostname, port);
 
     UserInterface ui;
-    const auto username = ui.ask_for_username();
+    std::string username = ui.ask_for_username();
     ClientNet::hook_message_printing_fp([](const char* msg)
             {append_text_function_pointer("system", msg);});
 
@@ -60,9 +62,14 @@ int main(int argc, char* argv[])
     ui.hook_send_messages([](const char* msg){
             ClientNet::get_singleton().send_to_server(msg);
             });
+
     //Give the UI a pointer to the function for sending messages to the server
     //Give the network code a function for giving received messages to the UI for display
-
+    network.hook_give_list(
+            [](const char* lst)
+            {
+                UserInterface::get_singleton().update_user_list(lst);
+            });
     bool run = true;
     while(run)
     {

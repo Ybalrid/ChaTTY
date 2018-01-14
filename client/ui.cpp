@@ -1,4 +1,5 @@
 #include "ui.hpp"
+#include <cstring>
 #include <ncurses.h>
 void UserInterface::yank_chat_log_to_screen()
 {
@@ -11,6 +12,21 @@ void UserInterface::yank_chat_log_to_screen()
     {
         wmove(chatLog, ++y, 1);
         wprintw(chatLog, reinterpret_cast<const char*>(chatLogBuffer[i].c_str()));
+    }
+}
+
+void UserInterface::yank_buddies_to_screen()
+{
+    int y = 0;
+    int maxx, maxy;
+    getmaxy(buddyList);
+
+    for(int i = std::max(0, (int)(buddies.size() - (maxy - 2)));
+            i < buddies.size();
+            i++)
+    {
+        wmove(buddyList, ++y, 1);
+        wprintw(buddyList, reinterpret_cast<const char*>(buddies[i].c_str()));
     }
 }
 void pop_back_utf8(ustring& utf8)
@@ -65,21 +81,20 @@ UserInterface::UserInterface() :
 
     //window 1 shows a list of connected people
     refresh();
-    buddyList = newwin(maxy - 2, 20, 1, 1);
+    buddyList = newwin(maxy - 2, 32, 1, 1);
     box(buddyList, 0, 0);
     wrefresh(buddyList);
 
     //window 2 will show the chat log
-    chatLog = newwin(maxy - 5, maxx - 23, 1, 22);
+    chatLog = newwin(maxy - 5, maxx - 35, 1, 34);
     box(chatLog, 0, 0);
     wrefresh(chatLog);
 
     //window 3 will be the text input bar of the user.
-    inputLine = newwin(3, maxx - 23, maxy -4, 22);
+    inputLine = newwin(3, maxx - 35, maxy -4, 34);
     box(inputLine, 0, 0);
     wrefresh(inputLine);
     wmove(inputLine, 1, 1);
-
     move(maxy-1, 0);
 }
 
@@ -168,6 +183,11 @@ void UserInterface::event_loop()
     wmove(chatLog, 1, 1);
     yank_chat_log_to_screen();
 
+    werase(buddyList);
+    box(buddyList, 0, 0);
+    wmove(buddyList, 1, 1);
+    yank_buddies_to_screen();
+
     werase(inputLine);
     box(inputLine, 0, 0);
     wmove(inputLine, 1, 1);
@@ -231,6 +251,23 @@ void UserInterface::event_loop()
 bool UserInterface::user_wants_to_quit()
 {
     return stop;
+}
+
+void UserInterface::update_user_list(const char* lst)
+{
+    buddies.clear();
+    if (!lst || *lst == '\0')
+    {
+        //nobody
+    }
+    else do
+    {
+        //Get the first string from the list
+        ustring name = (reinterpret_cast<const unsigned char*>(lst));
+        buddies.push_back(name);
+
+        lst += strlen(lst) + 1; //This advance the start of the string after the end of the current one, because sizeof(char) = 1
+    } while (*lst != '\0');//End of the list is marked by \0\0 instead of \0
 }
 
 
