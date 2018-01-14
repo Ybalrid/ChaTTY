@@ -1,5 +1,5 @@
 #pragma once
-
+#include <list>
 #include <vector>
 #include <string>
 #include <ncurses.h>
@@ -28,7 +28,7 @@ class UserInterface
     UserInterface();
     ~UserInterface();
 
-    UserInterface& get_singleton();
+    static UserInterface& get_singleton();
 
     void hook_send_messages(void (*fpointer)(const char*));
     std::string ask_for_username();

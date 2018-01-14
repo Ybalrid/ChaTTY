@@ -10,7 +10,7 @@ UserInterface::UserInterface() :
     maxy{0},
     func_ptr_to_server{nullptr}
 {
-    if(slingleton)
+    if(singleton)
     {
         fprintf(stderr, "Error, can't init the UI 2 times!");
         exit(-1);
@@ -58,7 +58,7 @@ UserInterface::~UserInterface()
 
 UserInterface& UserInterface::get_singleton()
 {
-    return *this;
+    return *singleton;
 }
 
 void UserInterface::hook_send_messages(void (*fpointer)(const char*))
