@@ -77,7 +77,7 @@ std::string UserInterface::ask_for_username()
     box(chatLog, 0, 0);
     wmove(chatLog, 1, 1);
     wattron(chatLog, COLOR_PAIR(2));
-    wprintw(chatLog, "Please, enter your name");
+    wprintw(chatLog, "\xe2\x9c\x93 Please, enter your name !");
     wattroff(chatLog, COLOR_PAIR(2));
 
     werase(inputLine);
