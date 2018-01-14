@@ -6,6 +6,7 @@
 
 class UserInterface
 {
+    static UserInterface* singleton;
     std::string inputBuffer;
     bool stop;
 
@@ -26,9 +27,13 @@ class UserInterface
     ///Initialize ncurses. Create 3 windows where to print text
     UserInterface();
     ~UserInterface();
-    
+
+    UserInterface& get_singleton();
+
     void hook_send_messages(void (*fpointer)(const char*));
     std::string ask_for_username();
+    void display_message(const std::string& username, const std::string message);
+    void reset_user_list(const std::list<std::string> usernames);
 
     ///Get event (text typed) from the terminal, in a non blocking way and do something with it
     ///Also capture non-text commands and change the state of flags accordigly

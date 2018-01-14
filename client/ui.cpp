@@ -1,12 +1,22 @@
 #include "ui.hpp"
 #include <ncurses.h>
 
+UserInterface* UserInterface::singleton = nullptr;
+
+
 UserInterface::UserInterface() :
     stop{false},
     maxx{0},
     maxy{0},
     func_ptr_to_server{nullptr}
 {
+    if(slingleton)
+    {
+        fprintf(stderr, "Error, can't init the UI 2 times!");
+        exit(-1);
+    }
+
+    singleton = this;
     //Init ncurses
     terminal = initscr();
     start_color();
@@ -44,6 +54,11 @@ UserInterface::UserInterface() :
 UserInterface::~UserInterface()
 {
     endwin();
+}
+
+UserInterface& UserInterface::get_singleton()
+{
+    return *this;
 }
 
 void UserInterface::hook_send_messages(void (*fpointer)(const char*))
