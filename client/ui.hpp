@@ -25,7 +25,7 @@ class UserInterface
     void send_to_server(ustring message);
 
     void (*func_ptr_to_server)(const char*);
-
+    void yank_chat_log_to_screen();
     public:
     ///Initialize ncurses. Create 3 windows where to print text
     UserInterface();

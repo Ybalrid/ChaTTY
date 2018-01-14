@@ -22,6 +22,15 @@ void sanityCheck()
     printf("lengh is : %d\n", byteLenght);
 }
 
+    auto append_text_function_pointer = [](const char* username, const char* message) {
+        UserInterface::get_singleton().display_message(
+                reinterpret_cast<const unsigned char*>(username),
+                reinterpret_cast<const unsigned char*>(message));
+    };
+void loop(const char* message)
+{
+    append_text_function_pointer("myself", message);
+}
 int main(int argc, char* argv[])
 {
     //set locale
@@ -43,14 +52,9 @@ int main(int argc, char* argv[])
     const auto username = ui.ask_for_username();
 
     //Init network here
-
+    ui.hook_send_messages(loop);
     //Give the UI a pointer to the function for sending messages to the server
     //Give the network code a function for giving received messages to the UI for display
-    auto append_text_function_pointer = [](const char* username, const char* message) {
-        UserInterface::get_singleton().display_message(
-                reinterpret_cast<const unsigned char*>(username),
-                reinterpret_cast<const unsigned char*>(message));
-    };
 
     bool run = true;
     while(run)

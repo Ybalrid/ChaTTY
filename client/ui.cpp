@@ -1,6 +1,18 @@
 #include "ui.hpp"
 #include <ncurses.h>
-
+void UserInterface::yank_chat_log_to_screen()
+{
+    int y = 0;
+    int maxy, maxx;
+    getmaxyx(chatLog, maxy, maxx);
+    for(int i = std::max(0, (int)(chatLogBuffer.size() - (maxy  - 2)));
+            i < chatLogBuffer.size();
+            i++)
+    {
+        wmove(chatLog, ++y, 1);
+        wprintw(chatLog, reinterpret_cast<const char*>(chatLogBuffer[i].c_str()));
+    }
+}
 void pop_back_utf8(ustring& utf8)
 {
     if(utf8.empty())
@@ -14,6 +26,15 @@ void pop_back_utf8(ustring& utf8)
 
 UserInterface* UserInterface::singleton = nullptr;
 const unsigned char UserInterface::invite[3] = "> ";
+
+void UserInterface::display_message(const unsigned char* username, const unsigned char* message)
+{
+    ustring s_username{username};
+    ustring s_message{message};
+
+    ustring to_add = s_username + reinterpret_cast<const unsigned char*>(": ") + s_message;
+    chatLogBuffer.push_back(to_add);
+}
 
 UserInterface::UserInterface() :
     stop{false},
@@ -145,7 +166,8 @@ void UserInterface::event_loop()
     werase(chatLog);
     box(chatLog, 0, 0);
     wmove(chatLog, 1, 1);
-    wprintw(chatLog, "Okay, I can write on this thing!");
+    yank_chat_log_to_screen();
+    
     werase(inputLine);
     box(inputLine, 0, 0);
     wmove(inputLine, 1, 1);
