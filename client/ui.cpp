@@ -7,9 +7,10 @@ UserInterface::UserInterface() :
     //Init ncurses
     terminal = initscr();
     start_color();
-    init_pair(1, COLOR_WHITE, COLOR_BLACK);
+    init_pair(1, COLOR_WHITE, COLOR_RED);
+    init_pair(2, COLOR_RED, COLOR_WHITE);
     attron(COLOR_PAIR(1));
-    //curs_set(2);
+    curs_set(2);
     noecho();
     keypad(stdscr, TRUE);
     cbreak();
@@ -45,6 +46,64 @@ UserInterface::~UserInterface()
 
 void UserInterface::send_to_server(std::string message)
 {
+}
+
+std::string UserInterface::ask_for_username()
+{
+    werase(chatLog);
+    box(chatLog, 0, 0);
+    wmove(chatLog, 1, 1);
+    wattron(chatLog, COLOR_PAIR(2));
+    wprintw(chatLog, "Please, enter your name");
+    wattroff(chatLog, COLOR_PAIR(2));
+
+    werase(inputLine);
+    box(inputLine, 0, 0);
+    wmove(inputLine, 1, 1);
+    refresh();
+    wrefresh(chatLog);
+    wrefresh(inputLine);
+
+    std::string name;
+    bool finished = false;
+    while(!finished)
+    {
+        int input = getch();
+        if(input == ERR) continue;
+
+        if(input == 127)
+        {
+            if(!name.empty())
+                name.pop_back();
+        }
+        if(input >= 32 && input <= 126)
+        {
+            name.push_back(static_cast<char>(input));
+        }
+        if(input == '\n' || input == '\r')
+        {
+            if(!name.empty())
+                finished = true;
+        }
+
+        werase(inputLine);
+        box(inputLine, 0, 0);
+        wmove(inputLine, 1, 1);
+        wprintw(inputLine, name.c_str());
+        refresh();
+        wrefresh(inputLine);
+    }
+
+    werase(chatLog);
+    werase(inputLine);
+    box(chatLog, 0, 0);
+    box(inputLine, 0, 0);
+    refresh();
+    wrefresh(chatLog);
+    wrefresh(inputLine);
+    wmove(inputLine, 1, 1);
+
+    return name;
 }
 
 void UserInterface::event_loop()

@@ -25,6 +25,8 @@ class UserInterface
     UserInterface();
     ~UserInterface();
 
+    std::string ask_for_username();
+
     ///Get event (text typed) from the terminal, in a non blocking way and do something with it
     ///Also capture non-text commands and change the state of flags accordigly
     void event_loop();

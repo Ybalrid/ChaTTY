@@ -38,6 +38,7 @@ int main(int argc, char* argv[])
     printf("Will connect to %s:%u\n", hostname, port);
 
     UserInterface ui;
+    ui.ask_for_username();
     bool run = true;
     while(run)
     {
