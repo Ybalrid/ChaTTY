@@ -38,11 +38,17 @@ int main(int argc, char* argv[])
     printf("Will connect to %s:%u\n", hostname, port);
 
     UserInterface ui;
-    ui.ask_for_username();
+    const auto username = ui.ask_for_username();
+
+    //Init network here
+
     bool run = true;
     while(run)
     {
         ui.event_loop();
+
+        //Do network transaction here
+
         if(ui.user_wants_to_quit() || false /*network lost*/)
         {
             run = false;
