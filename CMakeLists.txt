@@ -20,6 +20,9 @@ file(GLOB ChaTTY_Headers common/*.h client/*.hpp)
 file(GLOB ChaTTY_Sources_server server/*.cpp)
 file(GLOB ChaTTY_Headers_server common/*.h server/*.hpp)
 
+file(COPY server/motd.txt DESTINATION ${PROJECT_BINARY_DIR})
+
+
 add_executable(ChaTTY ${ChaTTY_Sources} ${ChaTTY_Headers})
 add_executable(ChaTTYd ${ChaTTY_Sources_server} ${ChaTTY_Headers_server})
 
