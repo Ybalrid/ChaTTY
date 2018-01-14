@@ -19,12 +19,20 @@ int     my_server_poll(s_my_server *my_srv) {
       (my_srv->events[i].events & EPOLLHUP) ||
       !(my_srv->events[i].events & EPOLLIN)) {
         /* Handle any error */
-        my_server_e_error(my_srv);        
+        my_server_e_error(my_srv);
         continue;
       }
       else if (my_srv->events[i].data.fd == my_srv->sfd) {
         /* The server socket have incoming connection(s) */
-        my_server_e_incoming_conn(my_srv);
+        if (my_server_e_incoming_conn(my_srv) == -1) {
+          fprintf(stderr, " > in my_server_e_incoming_conn()\n");
+        }
+      }
+      else {
+        /* Incoming data from a client */
+        if (my_server_e_incoming_data(my_srv) == -1) {
+          fprintf(stderr, " > in my_server_e_incoming_data()\n");
+        }
       }
       i++;
     }
