@@ -3,6 +3,7 @@
 
 typedef unsigned char byte_t;
 
+#define ChaTTY_PACKET_MAX_SIZE 1024
 
 //Preprocessor based "strcat"
 #define ChaTTY_CAT_IMPL(a, b) a##b
@@ -58,14 +59,15 @@ ChaTTY_PACKET_(NAME_TRANSPORT)
 {
     ChaTTY_PACKET_HEADER
 
-    char name[127];
+    byte_t  names[1023];  /* \0 seperated \0\0 ended */
 };
 
 ChaTTY_PACKET_(MESSAGE_TRANSPORT)
 {
     ChaTTY_PACKET_HEADER
 
-    char message[1023];
+    char  nickname[32];
+    char  message[991];
 };
 
 //Restore configuration
