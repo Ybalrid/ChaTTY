@@ -24,6 +24,8 @@ void sanityCheck()
 
 int main(int argc, char* argv[])
 {
+    //set locale
+    setlocale(LC_ALL, "");
     std::cout << "I'm in C++ \\o/\n";
 
     if(argc < 3)
