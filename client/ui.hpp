@@ -4,11 +4,12 @@
 #include <string>
 #include <ncurses.h>
 
+using ustring = std::basic_string<unsigned char>;
 class UserInterface
 {
+    static const unsigned char invite[3];
     static UserInterface* singleton;
-    
-    using ustring = std::basic_string<unsigned char>;
+
     ustring inputBuffer;
     bool stop;
 
@@ -19,7 +20,7 @@ class UserInterface
 
     int maxx, maxy;
 
-    std::vector<std::string> chatLogBuffer;
+    std::vector<ustring> chatLogBuffer;
 
     void send_to_server(ustring message);
 
@@ -34,7 +35,7 @@ class UserInterface
 
     void hook_send_messages(void (*fpointer)(const char*));
     std::string ask_for_username();
-    void display_message(const std::string& username, const std::string message);
+    void display_message(const unsigned char* username, const unsigned char* message);
     void reset_user_list(const std::list<std::string> usernames);
 
     ///Get event (text typed) from the terminal, in a non blocking way and do something with it

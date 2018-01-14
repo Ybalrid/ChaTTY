@@ -47,7 +47,9 @@ int main(int argc, char* argv[])
     //Give the UI a pointer to the function for sending messages to the server
     //Give the network code a function for giving received messages to the UI for display
     auto append_text_function_pointer = [](const char* username, const char* message) {
-        UserInterface::get_singleton().display_message(username, message);
+        UserInterface::get_singleton().display_message(
+                reinterpret_cast<const unsigned char*>(username),
+                reinterpret_cast<const unsigned char*>(message));
     };
 
     bool run = true;

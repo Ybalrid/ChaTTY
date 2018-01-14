@@ -1,8 +1,19 @@
 #include "ui.hpp"
 #include <ncurses.h>
 
-UserInterface* UserInterface::singleton = nullptr;
+void pop_back_utf8(ustring& utf8)
+{
+    if(utf8.empty())
+        return;
 
+    auto cp = utf8.data() + utf8.size();
+    while(--cp >= utf8.data() && ((*cp & 0b10000000) && !(*cp & 0b01000000))) {}
+    if(cp >= utf8.data())
+        utf8.resize(cp - utf8.data());
+}
+
+UserInterface* UserInterface::singleton = nullptr;
+const unsigned char UserInterface::invite[3] = "> ";
 
 UserInterface::UserInterface() :
     stop{false},
@@ -131,6 +142,14 @@ std::string UserInterface::ask_for_username()
 
 void UserInterface::event_loop()
 {
+    werase(chatLog);
+    box(chatLog, 0, 0);
+    wmove(chatLog, 1, 1);
+    wprintw(chatLog, "Okay, I can write on this thing!");
+    werase(inputLine);
+    box(inputLine, 0, 0);
+    wmove(inputLine, 1, 1);
+    wprintw(inputLine, reinterpret_cast<const char*>((invite + inputBuffer).c_str()));
 
     //TODO handle change of size here
     //Update display
@@ -154,23 +173,23 @@ void UserInterface::event_loop()
                 || input == 127)
         {
             if(!inputBuffer.empty())
-                inputBuffer.pop_back(); //popping from empty string causes segfault
+                pop_back_utf8(inputBuffer);
         }
         //TODO properly handler characters
-        else if(input >= 32 && input <= 126)
+        else if(input >= 32 && input <= 126) //ASCII, delete char removed
             inputBuffer.push_back(static_cast<unsigned char>(input));
-        else if((input >> 5) & 0b110)
+        else if((input & 0xE0) == 0xC0) //2 bytes encoded UTF-8 codepoint
         {
             inputBuffer.push_back(static_cast<unsigned char>(input));
             inputBuffer.push_back(static_cast<unsigned char>(getch()));
         }
-        else if((input >> 4) & 0b1110)
+        else if((input & 0xF0) == 0xE0) //3 bytes encoded UTF-8 codepoint
         {
             inputBuffer.push_back(static_cast<unsigned char>(input));
             inputBuffer.push_back(static_cast<unsigned char>(getch()));
             inputBuffer.push_back(static_cast<unsigned char>(getch()));
         }
-        else if((input >> 3) & 0b11110)
+        else if((input & 0xF8) == 0xF0) //4 bytes encoded UTF-8 codepoint
         {
             inputBuffer.push_back(static_cast<unsigned char>(input));
             inputBuffer.push_back(static_cast<unsigned char>(getch()));
@@ -185,10 +204,6 @@ void UserInterface::event_loop()
             inputBuffer.clear();
         }
     }
-    werase(inputLine);
-    box(inputLine, 0, 0);
-    wmove(inputLine, 1, 1);
-    wprintw(inputLine, reinterpret_cast<const char*>(inputBuffer.c_str()));
 }
 
 bool UserInterface::user_wants_to_quit()
