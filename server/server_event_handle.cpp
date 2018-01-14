@@ -193,16 +193,18 @@ int                         my_server_send_motd(s_my_server *my_srv, s_my_client
   char                      buf[BUF_SIZE];
   int                       motd_fd;
 
-  motd_fd = open(MOTD_FILE, O_RDONLY);
-  if (motd_fd < 0) {
-    perror("open motd file");
-    return (-1);
-  }
   nread = snprintf(buf, BUF_SIZE, "Votre addresse de connexion est %s:%s\n", client->addr_str, client->service_str);
   if (send(client->cfd, buf, nread, 0) != nread) {
     fprintf(stderr, "Error sending MOTD\n");
     return (-1);
   }
+
+  motd_fd = open(MOTD_FILE, O_RDONLY);
+  if (motd_fd < 0) {
+    perror("open motd file");
+    return (-1);
+  }
+
   while ((nread = read(motd_fd, buf, BUF_SIZE)) > 0) {
     if (send(client->cfd, buf, nread, 0) != nread) {
       fprintf(stderr, "Error sending MOTD\n");
