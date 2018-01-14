@@ -6,7 +6,7 @@ build/ChaTTY
 build/CMakeFiles
 build/ChaTTYd
 build
-
+*.user
 # Prerequisites
 *.d
 
