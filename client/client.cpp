@@ -83,9 +83,9 @@ void ClientNet::update()
     static int bytes_read;
     ioctl(socketfd, FIONREAD, &count);
     //if(logMessage) logMessage(std::to_string(count).c_str());
-    if(count > 0)
+    if(count >= ChaTTY_PACKET_MAX_SIZE)
     {
-        bytes_read = read(socketfd, buffer.data(), count);
+        bytes_read = read(socketfd, buffer.data(), ChaTTY_PACKET_MAX_SIZE);
 
         switch(buffer[0])
         {

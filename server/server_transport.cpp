@@ -55,7 +55,9 @@ int                       my_server_send_clients_list(s_my_channel *channel) {
 
 int                         my_server_send_motd(s_my_server *my_srv, s_my_client *client) {
   ssize_t                   nread;
-  int                       motd_fd;
+  FILE                      *motd_file;
+  char                      *motd_buf;
+  size_t                   motd_buf_len;
   ChaTTY_PACKET_(MESSAGE_TRANSPORT) data;
 
   memset((void *)&data, 0, sizeof(data));
@@ -66,29 +68,32 @@ int                         my_server_send_motd(s_my_server *my_srv, s_my_client
     fprintf(stderr, "Error sending MOTD\n");
     return (-1);
   }
-  return (0);
 
-  motd_fd = open(MOTD_FILE, O_RDONLY);
-  if (motd_fd < 0) {
+  motd_file = fopen(MOTD_FILE, "r");
+  if (motd_file == NULL) {
     perror("open motd file");
     return (-1);
   }
 
-  while ((nread = read(motd_fd, data.message, sizeof(data.message))) > 0) {
+  motd_buf = NULL;
+  motd_buf_len = 0;
+  while ((nread = getline(&motd_buf, &motd_buf_len, motd_file)) > 0) {
+    strncpy(data.message, motd_buf, sizeof(data.message));
+
     if (my_server_sendto_client(client, (byte_t *)&data, sizeof(data))) {
       fprintf(stderr, "Error sending MOTD\n");
-      close(motd_fd);
+      fclose(motd_file);
       return (-1);
     }
   }
 
   if (nread < 0) {
     perror("read motd file");
-    close(motd_fd);
+    fclose(motd_file);
     return (-1);
   }
 
-  close(motd_fd);
+  fclose(motd_file);
 
   return (0);
 }
